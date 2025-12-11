@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../constants/app_colors.dart';
-
-import '../../constants/app_colors.dart';
+import '../bulletin/screens/house_bulletin_screen.dart';
 
 class DynamicHomeScreen extends StatefulWidget {
   const DynamicHomeScreen({super.key});
@@ -213,127 +212,7 @@ class _DynamicHomeScreenState extends State<DynamicHomeScreen> {
 
   // TAB 4: Thông tin chung (General Information)
   Widget _buildInfoTab() {
-    return SafeArea(
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(20.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text("Thông tin chung", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-            const SizedBox(height: 24),
-            
-            // Thông tin nhóm
-            _buildInfoSection("Thông tin nhóm", [
-              _buildInfoItemRow("Tên nhóm:", "Nhà 123 - Shared House"),
-              _buildInfoItemRow("Địa chỉ:", "Số 123, Đường ABC, Quận XYZ"),
-              _buildInfoItemRow("Số thành viên:", "4 người"),
-            ]),
-            
-            const SizedBox(height: 24),
-            
-            // Danh sách thành viên
-            _buildInfoSection("Thành viên", [
-              _buildMemberItem("Khánh", "Leader", "https://i.pravatar.cc/150?img=1"),
-              _buildMemberItem("An", "Thành viên", "https://i.pravatar.cc/150?img=2"),
-              _buildMemberItem("Bình", "Thành viên", "https://i.pravatar.cc/150?img=3"),
-              _buildMemberItem("Cường", "Thành viên", "https://i.pravatar.cc/150?img=4"),
-            ]),
-            
-            const SizedBox(height: 24),
-            
-            // Thiết lập
-            _buildInfoSection("Thiết lập", [
-              _buildSettingItem("Thay đổi tên nhóm", Icons.edit),
-              _buildSettingItem("Quản lý thành viên", Icons.group),
-              _buildSettingItem("Cài đặt thông báo", Icons.notifications),
-              _buildSettingItem("Về ứng dụng", Icons.info),
-            ]),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // Helper widget cho phần thông tin
-  Widget _buildInfoSection(String title, List<Widget> children) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
-        const SizedBox(height: 12),
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)],
-          ),
-          child: Column(
-            children: children,
-          ),
-        ),
-      ],
-    );
-  }
-
-  // Helper widget cho item thông tin
-  Widget _buildInfoItemRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(label, style: const TextStyle(color: Colors.grey, fontSize: 14)),
-          Text(value, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: AppColors.textPrimary)),
-        ],
-      ),
-    );
-  }
-
-  // Helper widget cho thành viên
-  Widget _buildMemberItem(String name, String role, String avatar) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Row(
-        children: [
-          CircleAvatar(
-            radius: 20,
-            backgroundImage: NetworkImage(avatar),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(name, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
-                Text(role, style: const TextStyle(fontSize: 12, color: Colors.grey)),
-              ],
-            ),
-          ),
-          const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
-        ],
-      ),
-    );
-  }
-
-  // Helper widget cho mục thiết lập
-  Widget _buildSettingItem(String title, IconData icon) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Row(
-            children: [
-              Icon(icon, color: AppColors.accentPurple, size: 20),
-              const SizedBox(width: 12),
-              Text(title, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: AppColors.textPrimary)),
-            ],
-          ),
-          const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
-        ],
-      ),
-    );
+    return const HouseBulletinScreen();
   }
 
   // Helper widget cho mục công việc
