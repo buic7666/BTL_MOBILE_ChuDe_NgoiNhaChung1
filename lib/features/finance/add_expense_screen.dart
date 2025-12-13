@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import '../../constants/app_colors.dart';
 
 enum SplitMode { equal, percent, perPerson }
 
@@ -56,12 +55,6 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
   double get _parsedAmount {
     final raw = _amountController.text.replaceAll(RegExp(r'[^0-9\.]'), '');
     return double.tryParse(raw) ?? 0.0;
-  }
-
-  double _perPersonShare() {
-    final amt = _parsedAmount;
-    if (_members.isEmpty) return 0.0;
-    return double.parse((amt / _members.length).toStringAsFixed(0));
   }
 
   int get _selectedCount => _memberSelected.where((v) => v).length;
