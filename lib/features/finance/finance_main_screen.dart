@@ -41,9 +41,14 @@ class _FinanceMainScreenState extends State<FinanceMainScreen> {
       backgroundColor: AppColors.bgLight,
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
-          final result = await Navigator.of(context).push<Map<String, dynamic>>(
-            MaterialPageRoute(builder: (_) => const AddExpenseScreen()),
+          final result = await showModalBottomSheet<Map<String, dynamic>>(
+            context: context,
+            isScrollControlled: true,
+            backgroundColor: Colors.transparent,
+            builder: (_) => const AddExpenseScreen(),
           );
+
+          if (!mounted) return;
 
           if (result != null) {
             final prevNet = _computeNetBalances();
@@ -313,7 +318,8 @@ class _FinanceMainScreenState extends State<FinanceMainScreen> {
             : members;
         final sc = selected.isNotEmpty ? selected.length : 1;
         final perShare = amount / sc;
-        for (final m in members) shares[m] = selected.contains(m) ? perShare : 0.0;
+        for (final m in members)
+          shares[m] = selected.contains(m) ? perShare : 0.0;
       } else {
         // equal
         final per = amount / members.length;
@@ -330,7 +336,8 @@ class _FinanceMainScreenState extends State<FinanceMainScreen> {
       } else {
         // someone else paid => you may owe them your share
         final youShare = shares['you'] ?? 0.0;
-        net[payer] = (net[payer] ?? 0.0) - youShare; // negative means you owe them
+        net[payer] =
+            (net[payer] ?? 0.0) - youShare; // negative means you owe them
       }
     }
 
@@ -396,7 +403,7 @@ class _FinanceMainScreenState extends State<FinanceMainScreen> {
                               final dateStr = d is DateTime
                                   ? dateFormatter.format(d)
                                   : (d?.toString() ?? '');
-                              
+
                               final subtitle = e['subtitle'] as String?;
                               if (subtitle != null && subtitle.isNotEmpty) {
                                 return '$subtitle · $dateStr';
