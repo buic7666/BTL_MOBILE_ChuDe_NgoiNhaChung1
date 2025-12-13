@@ -41,9 +41,15 @@ class _FinanceMainScreenState extends State<FinanceMainScreen> {
       backgroundColor: AppColors.bgLight,
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
-          final result = await Navigator.of(context).push<Map<String, dynamic>>(
-            MaterialPageRoute(builder: (_) => const AddExpenseScreen()),
+          final scaffoldMessenger = ScaffoldMessenger.of(context);
+          final result = await showModalBottomSheet<Map<String, dynamic>>(
+            context: context,
+            isScrollControlled: true,
+            backgroundColor: Colors.transparent,
+            builder: (_) => const AddExpenseScreen(),
           );
+
+          if (!mounted) return;
 
           if (result != null) {
             final prevNet = _computeNetBalances();
@@ -101,7 +107,7 @@ class _FinanceMainScreenState extends State<FinanceMainScreen> {
             }
 
             if (messages.isNotEmpty) {
-              ScaffoldMessenger.of(context).showSnackBar(
+              scaffoldMessenger.showSnackBar(
                 SnackBar(
                   content: Text(messages.join('\n')),
                   duration: const Duration(seconds: 4),
@@ -124,7 +130,7 @@ class _FinanceMainScreenState extends State<FinanceMainScreen> {
                 children: [
                   Expanded(
                     child: _buildBigBalanceCard(
-                      'Người nợ bạn',
+                      'Số tiền bạn được trả ',
                       totalOweYou,
                       isPositive: true,
                     ),
@@ -132,7 +138,7 @@ class _FinanceMainScreenState extends State<FinanceMainScreen> {
                   const SizedBox(width: 12),
                   Expanded(
                     child: _buildBigBalanceCard(
-                      'Bạn đang nợ',
+                      'Số tiền bạn đang nợ ',
                       totalYouOwe,
                       isPositive: false,
                     ),
@@ -167,7 +173,7 @@ class _FinanceMainScreenState extends State<FinanceMainScreen> {
         .map(
           (e) => {
             'id': e.key,
-            'name': '${_displayName(e.key)} → Bạn',
+            'name': '${_displayName(e.key)} đang nợ bạn',
             'amountValue': e.value,
             'isPositive': true,
           },
@@ -179,7 +185,7 @@ class _FinanceMainScreenState extends State<FinanceMainScreen> {
         .map(
           (e) => {
             'id': e.key,
-            'name': 'Bạn → ${_displayName(e.key)}',
+            'name': 'Bạn đang nợ ${_displayName(e.key)}',
             'amountValue': e.value.abs(),
             'isPositive': false,
           },
@@ -193,18 +199,19 @@ class _FinanceMainScreenState extends State<FinanceMainScreen> {
       );
     }
 
-    Widget makeSection(String title, List<Map<String, dynamic>> list) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8.0),
-            child: Text(
-              title,
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
-          ),
-          ...list.map(
+    final combined = [...owesYou, ...youOwe];
+
+    if (combined.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.only(top: 12),
+        child: Center(child: Text('Không có khoản nợ')),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: combined
+          .map(
             (e) => Padding(
               padding: const EdgeInsets.only(bottom: 12),
               child: Container(
@@ -255,17 +262,8 @@ class _FinanceMainScreenState extends State<FinanceMainScreen> {
                 ),
               ),
             ),
-          ),
-        ],
-      );
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        if (owesYou.isNotEmpty) makeSection('Người nợ bạn', owesYou),
-        if (youOwe.isNotEmpty) makeSection('Bạn đang nợ', youOwe),
-      ],
+          )
+          .toList(),
     );
   }
 
