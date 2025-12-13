@@ -130,7 +130,7 @@ class _FinanceMainScreenState extends State<FinanceMainScreen> {
                 children: [
                   Expanded(
                     child: _buildBigBalanceCard(
-                      'Người nợ bạn',
+                      'Số tiền bạn được trả',
                       totalOweYou,
                       isPositive: true,
                     ),
@@ -138,7 +138,7 @@ class _FinanceMainScreenState extends State<FinanceMainScreen> {
                   const SizedBox(width: 12),
                   Expanded(
                     child: _buildBigBalanceCard(
-                      'Bạn đang nợ',
+                      'Số tiền bạn đang nợ',
                       totalYouOwe,
                       isPositive: false,
                     ),
@@ -199,18 +199,12 @@ class _FinanceMainScreenState extends State<FinanceMainScreen> {
       );
     }
 
-    Widget makeSection(String title, List<Map<String, dynamic>> list) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8.0),
-            child: Text(
-              title,
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
-          ),
-          ...list.map(
+    final combined = [...owesYou, ...youOwe];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: combined
+          .map(
             (e) => Padding(
               padding: const EdgeInsets.only(bottom: 12),
               child: Container(
@@ -261,17 +255,8 @@ class _FinanceMainScreenState extends State<FinanceMainScreen> {
                 ),
               ),
             ),
-          ),
-        ],
-      );
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        if (owesYou.isNotEmpty) makeSection('Người nợ bạn', owesYou),
-        if (youOwe.isNotEmpty) makeSection('Bạn đang nợ', youOwe),
-      ],
+          )
+          .toList(),
     );
   }
 
