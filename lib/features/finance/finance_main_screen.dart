@@ -41,6 +41,7 @@ class _FinanceMainScreenState extends State<FinanceMainScreen> {
       backgroundColor: AppColors.bgLight,
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
+          final scaffoldMessenger = ScaffoldMessenger.of(context);
           final result = await showModalBottomSheet<Map<String, dynamic>>(
             context: context,
             isScrollControlled: true,
@@ -106,7 +107,7 @@ class _FinanceMainScreenState extends State<FinanceMainScreen> {
             }
 
             if (messages.isNotEmpty) {
-              ScaffoldMessenger.of(context).showSnackBar(
+              scaffoldMessenger.showSnackBar(
                 SnackBar(
                   content: Text(messages.join('\n')),
                   duration: const Duration(seconds: 4),
@@ -195,73 +196,6 @@ class _FinanceMainScreenState extends State<FinanceMainScreen> {
       return const Padding(
         padding: EdgeInsets.only(top: 12),
         child: Center(child: Text('Không có khoản nợ')),
-      );
-    }
-
-    Widget makeSection(String title, List<Map<String, dynamic>> list) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8.0),
-            child: Text(
-              title,
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
-          ),
-          ...list.map(
-            (e) => Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.03),
-                      blurRadius: 8,
-                    ),
-                  ],
-                ),
-                child: Row(
-                  children: [
-                    CircleAvatar(
-                      backgroundColor: const Color(0xFFB39DDB),
-                      child: Text((_displayName((e['id'] as String))[0])),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            e['name'] as String,
-                            style: const TextStyle(fontWeight: FontWeight.w600),
-                          ),
-                          const SizedBox(height: 4),
-                          const Text(
-                            'Nhấn để thanh toán',
-                            style: TextStyle(fontSize: 12, color: Colors.grey),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Text(
-                      formatter.format((e['amountValue'] as double)),
-                      style: TextStyle(
-                        fontWeight: FontWeight.w700,
-                        color: (e['isPositive'] as bool)
-                            ? AppColors.success
-                            : AppColors.error,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ],
       );
     }
 
