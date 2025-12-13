@@ -13,7 +13,8 @@ class ResetPasswordScreen extends StatefulWidget {
   State<ResetPasswordScreen> createState() => _ResetPasswordScreenState();
 }
 
-class _ResetPasswordScreenState extends State<ResetPasswordScreen> with TickerProviderStateMixin {
+class _ResetPasswordScreenState extends State<ResetPasswordScreen>
+    with TickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
   final _newPasswordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
@@ -45,11 +46,21 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> with TickerPr
       duration: const Duration(milliseconds: 800),
     );
 
-    _headerOffset = Tween<Offset>(begin: const Offset(0, -0.15), end: Offset.zero).animate(
-      CurvedAnimation(parent: _animController, curve: const Interval(0.0, 0.45, curve: Curves.easeOut)),
+    _headerOffset =
+        Tween<Offset>(begin: const Offset(0, -0.15), end: Offset.zero).animate(
+          CurvedAnimation(
+            parent: _animController,
+            curve: const Interval(0.0, 0.45, curve: Curves.easeOut),
+          ),
+        );
+    _headerOpacity = CurvedAnimation(
+      parent: _animController,
+      curve: const Interval(0.0, 0.45, curve: Curves.easeOut),
     );
-    _headerOpacity = CurvedAnimation(parent: _animController, curve: const Interval(0.0, 0.45, curve: Curves.easeOut));
-    _formOpacity = CurvedAnimation(parent: _animController, curve: const Interval(0.35, 1.0, curve: Curves.easeIn));
+    _formOpacity = CurvedAnimation(
+      parent: _animController,
+      curve: const Interval(0.35, 1.0, curve: Curves.easeIn),
+    );
 
     // Logo animation controller (repeating scale + fade)
     _logoController = AnimationController(
@@ -74,7 +85,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> with TickerPr
     setState(() => _isLoading = true);
     try {
       final newPassword = _newPasswordController.text.trim();
-      
+
       // Update password in AuthService
       final success = await AuthService().updatePassword(
         email: widget.email,
@@ -115,7 +126,11 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> with TickerPr
     }
   }
 
-  Widget _buildSocialButton({required IconData icon, required String label, required VoidCallback onTap}) {
+  Widget _buildSocialButton({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+  }) {
     return GestureDetector(
       onTap: onTap,
       child: CircleAvatar(
@@ -141,7 +156,10 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> with TickerPr
       body: SafeArea(
         child: SingleChildScrollView(
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 20.0),
+            padding: const EdgeInsets.symmetric(
+              horizontal: 24.0,
+              vertical: 20.0,
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
@@ -172,7 +190,11 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> with TickerPr
                                   ),
                                 ],
                               ),
-                              child: const Icon(Icons.lock_outline, size: 40, color: AppColors.bgWhite),
+                              child: const Icon(
+                                Icons.lock_outline,
+                                size: 40,
+                                color: AppColors.bgWhite,
+                              ),
                             ),
                           ),
                         ),
@@ -206,8 +228,10 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> with TickerPr
                           obscureText: !_showNewPassword,
                           textInputAction: TextInputAction.next,
                           validator: (value) {
-                            if (value == null || value.isEmpty) return 'Vui lòng nhập mật khẩu mới';
-                            if (!AppUtils.isValidPassword(value)) return 'Mật khẩu phải có ít nhất 6 ký tự';
+                            if (value == null || value.isEmpty)
+                              return 'Vui lòng nhập mật khẩu mới';
+                            if (!AppUtils.isValidPassword(value))
+                              return 'Mật khẩu phải có ít nhất 6 ký tự';
                             return null;
                           },
                           decoration: InputDecoration(
@@ -217,20 +241,33 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> with TickerPr
                             fillColor: AppColors.accentBlue.withOpacity(0.08),
                             suffixIcon: IconButton(
                               icon: Icon(
-                                _showNewPassword ? Icons.visibility : Icons.visibility_off,
+                                _showNewPassword
+                                    ? Icons.visibility
+                                    : Icons.visibility_off,
                                 color: AppColors.textSecondary,
                               ),
-                              onPressed: () => setState(() => _showNewPassword = !_showNewPassword),
+                              onPressed: () => setState(
+                                () => _showNewPassword = !_showNewPassword,
+                              ),
                             ),
                             enabledBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
-                              borderSide: BorderSide(color: AppColors.accentBlue, width: 2.0),
+                              borderSide: BorderSide(
+                                color: AppColors.accentBlue,
+                                width: 2.0,
+                              ),
                             ),
                             focusedBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
-                              borderSide: BorderSide(color: AppColors.accentBlue, width: 2.5),
+                              borderSide: BorderSide(
+                                color: AppColors.accentBlue,
+                                width: 2.5,
+                              ),
                             ),
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 18,
+                            ),
                           ),
                         ),
                         const SizedBox(height: 16),
@@ -246,8 +283,10 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> with TickerPr
                             obscureText: !_showConfirmPassword,
                             textInputAction: TextInputAction.done,
                             validator: (value) {
-                              if (value == null || value.isEmpty) return 'Vui lòng xác nhận mật khẩu';
-                              if (value != _newPasswordController.text) return 'Mật khẩu không trùng khớp';
+                              if (value == null || value.isEmpty)
+                                return 'Vui lòng xác nhận mật khẩu';
+                              if (value != _newPasswordController.text)
+                                return 'Mật khẩu không trùng khớp';
                               return null;
                             },
                             decoration: InputDecoration(
@@ -255,12 +294,20 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> with TickerPr
                               border: InputBorder.none,
                               suffixIcon: IconButton(
                                 icon: Icon(
-                                  _showConfirmPassword ? Icons.visibility : Icons.visibility_off,
+                                  _showConfirmPassword
+                                      ? Icons.visibility
+                                      : Icons.visibility_off,
                                   color: AppColors.textSecondary,
                                 ),
-                                onPressed: () => setState(() => _showConfirmPassword = !_showConfirmPassword),
+                                onPressed: () => setState(
+                                  () => _showConfirmPassword =
+                                      !_showConfirmPassword,
+                                ),
                               ),
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 18,
+                              ),
                             ),
                           ),
                         ),
@@ -276,15 +323,28 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> with TickerPr
                   onPressed: _isLoading ? null : _handleResetPassword,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.accentBlue,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     elevation: 8,
                   ),
                   child: _isLoading
-                      ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: AppColors.bgWhite, strokeWidth: 2))
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                            color: AppColors.bgWhite,
+                            strokeWidth: 2,
+                          ),
+                        )
                       : const Text(
                           'Đặt lại mật khẩu',
-                          style: TextStyle(color: AppColors.bgWhite, fontSize: 16, fontWeight: FontWeight.w700),
+                          style: TextStyle(
+                            color: AppColors.bgWhite,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
                 ),
 
@@ -296,19 +356,28 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> with TickerPr
                   children: [
                     const Text(
                       'Nhớ mật khẩu? ',
-                      style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
+                      style: TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 14,
+                      ),
                     ),
                     GestureDetector(
                       onTap: () {
                         Navigator.pushAndRemoveUntil(
                           context,
-                          MaterialPageRoute(builder: (_) => const LoginScreen()),
+                          MaterialPageRoute(
+                            builder: (_) => const LoginScreen(),
+                          ),
                           (route) => false,
                         );
                       },
                       child: const Text(
                         'Đăng nhập',
-                        style: TextStyle(color: AppColors.accentBlue, fontWeight: FontWeight.w700, fontSize: 14),
+                        style: TextStyle(
+                          color: AppColors.accentBlue,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 14,
+                        ),
                       ),
                     ),
                   ],
@@ -322,11 +391,23 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> with TickerPr
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    _buildSocialButton(icon: Icons.g_mobiledata, label: 'G', onTap: () {}),
+                    _buildSocialButton(
+                      icon: Icons.g_mobiledata,
+                      label: 'G',
+                      onTap: () {},
+                    ),
                     const SizedBox(width: 12),
-                    _buildSocialButton(icon: Icons.facebook, label: 'F', onTap: () {}),
+                    _buildSocialButton(
+                      icon: Icons.facebook,
+                      label: 'F',
+                      onTap: () {},
+                    ),
                     const SizedBox(width: 12),
-                    _buildSocialButton(icon: Icons.apple, label: 'A', onTap: () {}),
+                    _buildSocialButton(
+                      icon: Icons.apple,
+                      label: 'A',
+                      onTap: () {},
+                    ),
                   ],
                 ),
                 const SizedBox(height: 18),

@@ -12,7 +12,10 @@ class EnterHouseCodeScreen extends StatefulWidget {
 }
 
 class _EnterHouseCodeScreenState extends State<EnterHouseCodeScreen> {
-  final List<TextEditingController> _controllers = List.generate(6, (_) => TextEditingController());
+  final List<TextEditingController> _controllers = List.generate(
+    6,
+    (_) => TextEditingController(),
+  );
   final List<FocusNode> _focusNodes = List.generate(6, (_) => FocusNode());
   bool _isLoading = false;
 
@@ -57,10 +60,10 @@ class _EnterHouseCodeScreenState extends State<EnterHouseCodeScreen> {
         userId: user.uid,
         houseCode: code,
       );
-      
+
       if (mounted) {
         setState(() => _isLoading = false);
-        
+
         if (success) {
           // Vào nhà thành công
           ScaffoldMessenger.of(context).showSnackBar(
@@ -69,9 +72,9 @@ class _EnterHouseCodeScreenState extends State<EnterHouseCodeScreen> {
               backgroundColor: Colors.green,
             ),
           );
-          
+
           await Future.delayed(const Duration(milliseconds: 500));
-          
+
           if (mounted) {
             Navigator.of(context).pushAndRemoveUntil(
               MaterialPageRoute(builder: (_) => DynamicHomeScreen()),
@@ -117,7 +120,7 @@ class _EnterHouseCodeScreenState extends State<EnterHouseCodeScreen> {
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               const SizedBox(height: 40),
-              
+
               // Icon
               Container(
                 width: 80,
@@ -132,9 +135,9 @@ class _EnterHouseCodeScreenState extends State<EnterHouseCodeScreen> {
                   color: Color.fromARGB(255, 13, 9, 230),
                 ),
               ),
-              
+
               const SizedBox(height: 24),
-              
+
               // Title
               const Text(
                 'Nhập Mã Nhà',
@@ -144,20 +147,17 @@ class _EnterHouseCodeScreenState extends State<EnterHouseCodeScreen> {
                   color: AppColors.textPrimary,
                 ),
               ),
-              
+
               const SizedBox(height: 8),
-              
+
               // Subtitle
               const Text(
                 'Nhập mã 6 số để tham gia nhà',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: AppColors.textSecondary,
-                ),
+                style: TextStyle(fontSize: 14, color: AppColors.textSecondary),
               ),
-              
+
               const SizedBox(height: 40),
-              
+
               // Code input fields
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -182,15 +182,24 @@ class _EnterHouseCodeScreenState extends State<EnterHouseCodeScreen> {
                         fillColor: Colors.white,
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: AppColors.accentPurple, width: 1.5),
+                          borderSide: const BorderSide(
+                            color: AppColors.accentPurple,
+                            width: 1.5,
+                          ),
                         ),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(color: AppColors.textLight.withOpacity(0.3), width: 1.5),
+                          borderSide: BorderSide(
+                            color: AppColors.textLight.withOpacity(0.3),
+                            width: 1.5,
+                          ),
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: AppColors.accentPurple, width: 2),
+                          borderSide: const BorderSide(
+                            color: AppColors.accentPurple,
+                            width: 2,
+                          ),
                         ),
                       ),
                       onChanged: (value) => _handleCodeInput(index, value),
@@ -202,9 +211,9 @@ class _EnterHouseCodeScreenState extends State<EnterHouseCodeScreen> {
                   );
                 }),
               ),
-              
+
               const SizedBox(height: 32),
-              
+
               // Info box
               Container(
                 padding: const EdgeInsets.all(16),
@@ -218,11 +227,7 @@ class _EnterHouseCodeScreenState extends State<EnterHouseCodeScreen> {
                 ),
                 child: Row(
                   children: [
-                    Icon(
-                      Icons.info_outline,
-                      color: AppColors.info,
-                      size: 20,
-                    ),
+                    Icon(Icons.info_outline, color: AppColors.info, size: 20),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
@@ -237,9 +242,9 @@ class _EnterHouseCodeScreenState extends State<EnterHouseCodeScreen> {
                   ],
                 ),
               ),
-              
+
               const Spacer(),
-              
+
               // Submit button
               SizedBox(
                 width: double.infinity,
@@ -260,7 +265,9 @@ class _EnterHouseCodeScreenState extends State<EnterHouseCodeScreen> {
                           height: 20,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(Color.fromARGB(255, 10, 10, 10)),
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Color.fromARGB(255, 10, 10, 10),
+                            ),
                           ),
                         )
                       : const Text(
@@ -272,9 +279,9 @@ class _EnterHouseCodeScreenState extends State<EnterHouseCodeScreen> {
                         ),
                 ),
               ),
-              
+
               const SizedBox(height: 16),
-              
+
               // Create house link
               TextButton(
                 onPressed: () {
@@ -288,7 +295,7 @@ class _EnterHouseCodeScreenState extends State<EnterHouseCodeScreen> {
                   ),
                 ),
               ),
-              
+
               const SizedBox(height: 24),
             ],
           ),

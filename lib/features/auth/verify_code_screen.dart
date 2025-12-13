@@ -6,13 +6,18 @@ class VerifyCodeScreen extends StatefulWidget {
   final String contactInfo; // email or phone that code was sent to
   final String correctOTP; // correct OTP code for validation
 
-  const VerifyCodeScreen({Key? key, required this.contactInfo, required this.correctOTP}) : super(key: key);
+  const VerifyCodeScreen({
+    Key? key,
+    required this.contactInfo,
+    required this.correctOTP,
+  }) : super(key: key);
 
   @override
   State<VerifyCodeScreen> createState() => _VerifyCodeScreenState();
 }
 
-class _VerifyCodeScreenState extends State<VerifyCodeScreen> with TickerProviderStateMixin {
+class _VerifyCodeScreenState extends State<VerifyCodeScreen>
+    with TickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
   final _codeController = TextEditingController();
   bool _isLoading = false;
@@ -40,11 +45,21 @@ class _VerifyCodeScreenState extends State<VerifyCodeScreen> with TickerProvider
       duration: const Duration(milliseconds: 800),
     );
 
-    _headerOffset = Tween<Offset>(begin: const Offset(0, -0.15), end: Offset.zero).animate(
-      CurvedAnimation(parent: _animController, curve: const Interval(0.0, 0.45, curve: Curves.easeOut)),
+    _headerOffset =
+        Tween<Offset>(begin: const Offset(0, -0.15), end: Offset.zero).animate(
+          CurvedAnimation(
+            parent: _animController,
+            curve: const Interval(0.0, 0.45, curve: Curves.easeOut),
+          ),
+        );
+    _headerOpacity = CurvedAnimation(
+      parent: _animController,
+      curve: const Interval(0.0, 0.45, curve: Curves.easeOut),
     );
-    _headerOpacity = CurvedAnimation(parent: _animController, curve: const Interval(0.0, 0.45, curve: Curves.easeOut));
-    _formOpacity = CurvedAnimation(parent: _animController, curve: const Interval(0.35, 1.0, curve: Curves.easeIn));
+    _formOpacity = CurvedAnimation(
+      parent: _animController,
+      curve: const Interval(0.35, 1.0, curve: Curves.easeIn),
+    );
 
     // Logo animation controller (repeating scale + fade)
     _logoController = AnimationController(
@@ -75,7 +90,11 @@ class _VerifyCodeScreenState extends State<VerifyCodeScreen> with TickerProvider
         // Check if entered OTP matches the correct OTP
         if (_codeController.text.trim() == widget.correctOTP) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('✓ Mã xác nhận chính xác! Vui lòng đặt mật khẩu mới.')),
+            const SnackBar(
+              content: Text(
+                '✓ Mã xác nhận chính xác! Vui lòng đặt mật khẩu mới.',
+              ),
+            ),
           );
           // Navigate to reset password screen
           Navigator.pushReplacement(
@@ -86,7 +105,9 @@ class _VerifyCodeScreenState extends State<VerifyCodeScreen> with TickerProvider
           );
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('✗ Mã xác nhận không chính xác! Vui lòng thử lại.')),
+            const SnackBar(
+              content: Text('✗ Mã xác nhận không chính xác! Vui lòng thử lại.'),
+            ),
           );
         }
       }
@@ -95,7 +116,11 @@ class _VerifyCodeScreenState extends State<VerifyCodeScreen> with TickerProvider
     }
   }
 
-  Widget _buildSocialButton({required IconData icon, required String label, required VoidCallback onTap}) {
+  Widget _buildSocialButton({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+  }) {
     return GestureDetector(
       onTap: onTap,
       child: CircleAvatar(
@@ -121,7 +146,10 @@ class _VerifyCodeScreenState extends State<VerifyCodeScreen> with TickerProvider
       body: SafeArea(
         child: SingleChildScrollView(
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 20.0),
+            padding: const EdgeInsets.symmetric(
+              horizontal: 24.0,
+              vertical: 20.0,
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
@@ -152,7 +180,11 @@ class _VerifyCodeScreenState extends State<VerifyCodeScreen> with TickerProvider
                                   ),
                                 ],
                               ),
-                              child: const Icon(Icons.verified_user, size: 40, color: AppColors.bgWhite),
+                              child: const Icon(
+                                Icons.verified_user,
+                                size: 40,
+                                color: AppColors.bgWhite,
+                              ),
                             ),
                           ),
                         ),
@@ -205,8 +237,10 @@ class _VerifyCodeScreenState extends State<VerifyCodeScreen> with TickerProvider
                             letterSpacing: 2.0,
                           ),
                           validator: (value) {
-                            if (value == null || value.isEmpty) return 'Vui lòng nhập mã xác nhận';
-                            if (value.length < 4) return 'Mã phải có ít nhất 4 ký tự';
+                            if (value == null || value.isEmpty)
+                              return 'Vui lòng nhập mã xác nhận';
+                            if (value.length < 4)
+                              return 'Mã phải có ít nhất 4 ký tự';
                             return null;
                           },
                           decoration: InputDecoration(
@@ -216,13 +250,22 @@ class _VerifyCodeScreenState extends State<VerifyCodeScreen> with TickerProvider
                             fillColor: AppColors.accentBlue.withOpacity(0.08),
                             enabledBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
-                              borderSide: BorderSide(color: AppColors.accentBlue, width: 2.0),
+                              borderSide: BorderSide(
+                                color: AppColors.accentBlue,
+                                width: 2.0,
+                              ),
                             ),
                             focusedBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
-                              borderSide: BorderSide(color: AppColors.accentBlue, width: 2.5),
+                              borderSide: BorderSide(
+                                color: AppColors.accentBlue,
+                                width: 2.5,
+                              ),
                             ),
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 24,
+                            ),
                           ),
                         ),
                       ],
@@ -237,15 +280,28 @@ class _VerifyCodeScreenState extends State<VerifyCodeScreen> with TickerProvider
                   onPressed: _isLoading ? null : _handleConfirmCode,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.accentBlue,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     elevation: 8,
                   ),
                   child: _isLoading
-                      ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: AppColors.bgWhite, strokeWidth: 2))
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                            color: AppColors.bgWhite,
+                            strokeWidth: 2,
+                          ),
+                        )
                       : const Text(
                           'Xác nhận',
-                          style: TextStyle(color: AppColors.bgWhite, fontSize: 16, fontWeight: FontWeight.w700),
+                          style: TextStyle(
+                            color: AppColors.bgWhite,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
                 ),
 
@@ -257,15 +313,24 @@ class _VerifyCodeScreenState extends State<VerifyCodeScreen> with TickerProvider
                   children: [
                     const Text(
                       'Đã có tài khoản? ',
-                      style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
+                      style: TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 14,
+                      ),
                     ),
                     GestureDetector(
                       onTap: () {
-                        Navigator.of(context).popUntil((route) => route.isFirst);
+                        Navigator.of(
+                          context,
+                        ).popUntil((route) => route.isFirst);
                       },
                       child: const Text(
                         'Đăng nhập',
-                        style: TextStyle(color: AppColors.accentBlue, fontWeight: FontWeight.w700, fontSize: 14),
+                        style: TextStyle(
+                          color: AppColors.accentBlue,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 14,
+                        ),
                       ),
                     ),
                   ],
@@ -279,11 +344,23 @@ class _VerifyCodeScreenState extends State<VerifyCodeScreen> with TickerProvider
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    _buildSocialButton(icon: Icons.g_mobiledata, label: 'G', onTap: () {}),
+                    _buildSocialButton(
+                      icon: Icons.g_mobiledata,
+                      label: 'G',
+                      onTap: () {},
+                    ),
                     const SizedBox(width: 12),
-                    _buildSocialButton(icon: Icons.facebook, label: 'F', onTap: () {}),
+                    _buildSocialButton(
+                      icon: Icons.facebook,
+                      label: 'F',
+                      onTap: () {},
+                    ),
                     const SizedBox(width: 12),
-                    _buildSocialButton(icon: Icons.apple, label: 'A', onTap: () {}),
+                    _buildSocialButton(
+                      icon: Icons.apple,
+                      label: 'A',
+                      onTap: () {},
+                    ),
                   ],
                 ),
                 const SizedBox(height: 18),
