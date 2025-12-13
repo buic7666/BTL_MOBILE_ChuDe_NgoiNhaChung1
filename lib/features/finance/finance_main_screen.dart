@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 
 import '../../constants/app_colors.dart';
 import 'add_expense_screen.dart';
+import 'payment_screen.dart';
 
 class FinanceMainScreen extends StatefulWidget {
   const FinanceMainScreen({super.key});
@@ -12,18 +13,23 @@ class FinanceMainScreen extends StatefulWidget {
 }
 
 class _FinanceMainScreenState extends State<FinanceMainScreen> {
-  int _selectedToggle = 0; // 0 = Ai nợ ai (default), 1 = Chi tiêu
+  int _selectedToggle = 0; // 0 = Ai nợ ai, 1 = Chi tiêu
 
-  // temporary in-memory expenses while backend isn't wired
   final List<Map<String, dynamic>> _expenses = [
     {
       'title': 'Tiền điện chung',
       'subtitle': 'An đã trả - Chia đều',
-      'date': null,
+      'date': DateTime.now(),
       'amount': 125000.0,
       'payer': 'An',
     },
   ];
+
+  // In-memory wallet balance (simple demo state)
+  double _walletBalance = 0.0;
+
+  // Track settlements per member (positive/negative deltas applied to net balances)
+  final Map<String, double> _settlements = {};
 
   @override
   Widget build(BuildContext context) {
@@ -38,7 +44,7 @@ class _FinanceMainScreenState extends State<FinanceMainScreen> {
         .fold(0.0, (p, e) => p + e.value.abs());
 
     return Scaffold(
-      backgroundColor: AppColors.bgLight,
+      backgroundColor: const Color(0xFFF5F5F5),
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
           final scaffoldMessenger = ScaffoldMessenger.of(context);
@@ -54,10 +60,8 @@ class _FinanceMainScreenState extends State<FinanceMainScreen> {
           if (result != null) {
             final prevNet = _computeNetBalances();
 
-            // ensure date
             result['date'] = result['date'] ?? DateTime.now();
 
-            // build subtitle based on split mode
             final payerRaw = (result['payer'] ?? '').toString();
             String payerName = _displayName(_normalizeId(payerRaw));
             final splitRaw = (result['splitMode'] ?? '').toString();
@@ -77,7 +81,6 @@ class _FinanceMainScreenState extends State<FinanceMainScreen> {
               _expenses.insert(0, result);
             });
 
-            // compute new net and produce notifications
             final newNet = _computeNetBalances();
             final messages = <String>[];
             final nf = NumberFormat.currency(locale: 'vi_VN', symbol: 'đ');
@@ -116,47 +119,246 @@ class _FinanceMainScreenState extends State<FinanceMainScreen> {
             }
           }
         },
-        backgroundColor: AppColors.accentPurple,
-        child: const Icon(Icons.add, color: Colors.white),
+        backgroundColor: const Color(0xFF6B5CFF),
+        child: const Icon(Icons.add, color: Colors.white, size: 28),
       ),
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            children: [
-              _buildHeader(),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildBigBalanceCard(
-                      'Số tiền bạn được trả',
-                      totalOweYou,
-                      isPositive: true,
+        child: Column(
+          children: [
+            Expanded(
+              child: SingleChildScrollView(
+                child: Column(
+                  children: [
+                    // Header
+                    Container(
+                      width: double.infinity,
+                      decoration: const BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [Color(0xFF7C5CFF), Color(0xFF6B4FE8)],
+                        ),
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 24),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Text(
+                            'Tài chính',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.white,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          // Text(
+                          //   'Ví: ${formatter.format(_walletBalance)}',
+                          //   style: const TextStyle(
+                          //     fontSize: 13,
+                          //     fontWeight: FontWeight.w500,
+                          //     color: Colors.white70,
+                          //   ),
+                          // ),
+                        ],
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _buildBigBalanceCard(
-                      'Số tiền bạn đang nợ',
-                      totalYouOwe,
-                      isPositive: false,
+
+                    const SizedBox(height: 20),
+
+                    // Balance Cards
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Column(
+                        children: [
+                          // Green Card
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(20),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFB8F4D4),
+                              borderRadius: BorderRadius.circular(20),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.05),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'Số tiền bạn được trả',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w400,
+                                    color: Color(0xFF4A5568),
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  formatter.format(totalOweYou),
+                                  style: const TextStyle(
+                                    fontSize: 36,
+                                    fontWeight: FontWeight.w700,
+                                    color: Color(0xFF6B5CFF),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+
+                          const SizedBox(height: 16),
+
+                          // Pink Card
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(20),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFFB8B8),
+                              borderRadius: BorderRadius.circular(20),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.05),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'Số tiền bạn đang nợ',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w400,
+                                    color: Color(0xFF4A5568),
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  formatter.format(totalYouOwe),
+                                  style: const TextStyle(
+                                    fontSize: 36,
+                                    fontWeight: FontWeight.w700,
+                                    color: Color(0xFF6B5CFF),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              _buildToggleButtons(),
-              const SizedBox(height: 12),
-              Expanded(
-                child: SingleChildScrollView(
-                  child: _selectedToggle == 0
-                      ? _buildTransactionList()
-                      : _buildExpensesList(formatter),
+
+                    const SizedBox(height: 24),
+
+                    // Filter Buttons
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.swap_vert,
+                            size: 20,
+                            color: Color(0xFF9CA3AF),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: GestureDetector(
+                              onTap: () => setState(() => _selectedToggle = 0),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 8,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: _selectedToggle == 0
+                                      ? const Color(0xFF7C5CFF)
+                                      : Colors.white,
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(
+                                    color: _selectedToggle == 0
+                                        ? const Color(0xFF7C5CFF)
+                                        : const Color(0xFFE5E7EB),
+                                    width: 1,
+                                  ),
+                                ),
+                                child: Center(
+                                  child: Text(
+                                    'Ai nợ ai',
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w500,
+                                      color: _selectedToggle == 0
+                                          ? Colors.white
+                                          : const Color(0xFF6B7280),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: GestureDetector(
+                              onTap: () => setState(() => _selectedToggle = 1),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 8,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: _selectedToggle == 1
+                                      ? const Color(0xFF7C5CFF)
+                                      : Colors.white,
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(
+                                    color: _selectedToggle == 1
+                                        ? const Color(0xFF7C5CFF)
+                                        : const Color(0xFFE5E7EB),
+                                    width: 1,
+                                  ),
+                                ),
+                                child: Center(
+                                  child: Text(
+                                    'Chi tiêu',
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w500,
+                                      color: _selectedToggle == 1
+                                          ? Colors.white
+                                          : const Color(0xFF6B7280),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    // Content
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: _selectedToggle == 0
+                          ? _buildTransactionList()
+                          : _buildExpensesList(formatter),
+                    ),
+
+                    const SizedBox(height: 100),
+                  ],
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -164,10 +366,8 @@ class _FinanceMainScreenState extends State<FinanceMainScreen> {
 
   Widget _buildTransactionList() {
     final formatter = NumberFormat.currency(locale: 'vi_VN', symbol: 'đ');
-
     final net = _computeNetBalances();
 
-    // Split into owes-you (positive) and you-owe (negative)
     final owesYou = net.entries
         .where((e) => e.key != 'you' && e.value > 0.5)
         .map(
@@ -194,70 +394,285 @@ class _FinanceMainScreenState extends State<FinanceMainScreen> {
 
     if (owesYou.isEmpty && youOwe.isEmpty) {
       return const Padding(
-        padding: EdgeInsets.only(top: 12),
-        child: Center(child: Text('Không có khoản nợ')),
+        padding: EdgeInsets.only(top: 32),
+        child: Center(
+          child: Text(
+            'Không có khoản nợ',
+            style: TextStyle(color: Color(0xFF9CA3AF), fontSize: 14),
+          ),
+        ),
       );
     }
 
     final combined = [...owesYou, ...youOwe];
 
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: combined
-          .map(
-            (e) => Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.03),
-                      blurRadius: 8,
-                    ),
-                  ],
-                ),
-                child: Row(
-                  children: [
-                    CircleAvatar(
-                      backgroundColor: const Color(0xFFB39DDB),
-                      child: Text((_displayName((e['id'] as String))[0])),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            e['name'] as String,
-                            style: const TextStyle(fontWeight: FontWeight.w600),
-                          ),
-                          const SizedBox(height: 4),
-                          const Text(
-                            'Nhấn để thanh toán',
-                            style: TextStyle(fontSize: 12, color: Colors.grey),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Text(
-                      formatter.format((e['amountValue'] as double)),
-                      style: TextStyle(
-                        fontWeight: FontWeight.w700,
-                        color: (e['isPositive'] as bool)
-                            ? AppColors.success
-                            : AppColors.error,
-                      ),
-                    ),
-                  ],
+      children: combined.map((e) {
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: _buildTransactionItem(
+            initial: _displayName(e['id'] as String)[0],
+            color: _getAvatarColor(e['id'] as String),
+            title: e['name'] as String,
+            subtitle: 'Nhấn để thanh toán',
+            amount: formatter.format(e['amountValue'] as double),
+            amountValue: e['amountValue'] as double,
+            isPositive: e['isPositive'] as bool,
+            memberId: e['id'] as String,
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _buildTransactionItem({
+    required String initial,
+    required Color color,
+    required String title,
+    required String subtitle,
+    required String amount,
+    required double amountValue,
+    required bool isPositive,
+    required String memberId,
+  }) {
+    return GestureDetector(
+      onTap: () async {
+        // Parse tên từ title
+        String fromName = '';
+        String toName = '';
+        if (title.contains('→')) {
+          final parts = title.split('→');
+          fromName = parts[0].trim();
+          toName = parts.length > 1 ? parts[1].trim() : '';
+        }
+
+        // Mở màn hình thanh toán
+        final result = await Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => PaymentScreen(
+              fromName: fromName,
+              toName: toName,
+              amount: amountValue,
+              date: DateTime.now(),
+              description: 'Chi phí chung',
+              isReceive: isPositive,
+            ),
+          ),
+        );
+
+        // Xử lý khi confirm - GHI NHẬN THANH TOÁN (settlement)
+        if (result != null && result['confirmed'] == true && mounted) {
+          setState(() {
+            final action =
+                result['action']?.toString() ??
+                (isPositive ? 'received' : 'paid');
+
+            // If action == 'received' => member paid you (they owed you)
+            // If action == 'paid' => you paid member (you owed them)
+            final delta = action == 'received' ? -amountValue : amountValue;
+            _settlements[memberId] = (_settlements[memberId] ?? 0.0) + delta;
+
+            if (action == 'received') {
+              _walletBalance += amountValue;
+            } else {
+              _walletBalance -= amountValue;
+            }
+          });
+
+          final nf = NumberFormat.currency(locale: 'vi_VN', symbol: 'đ');
+          final verb =
+              (result['action'] ?? (isPositive ? 'received' : 'paid')) ==
+                  'received'
+              ? 'nhận'
+              : 'đã thanh toán';
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                '✅ Đã $verb ${nf.format(amountValue)} từ $fromName',
+              ),
+              duration: const Duration(seconds: 2),
+              backgroundColor: const Color(0xFF10B981),
+            ),
+          );
+        }
+      },
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: const Color(0xFFE8E8E8),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+              child: Center(
+                child: Text(
+                  initial,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                  ),
                 ),
               ),
             ),
-          )
-          .toList(),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF1F2937),
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w400,
+                      color: Color(0xFF6B7280),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Text(
+              amount,
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                color: isPositive
+                    ? const Color(0xFF10B981)
+                    : const Color(0xFFEF4444),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
+  }
+
+  Color _getAvatarColor(String id) {
+    switch (id) {
+      case 'an':
+        return const Color(0xFFD946EF);
+      case 'binh':
+        return const Color(0xFFD946EF);
+      case 'chi':
+        return const Color(0xFFC084FC);
+      default:
+        return const Color(0xFFB39DDB);
+    }
+  }
+
+  Widget _buildExpensesList(NumberFormat formatter) {
+    final dateFormatter = DateFormat('dd/MM/yyyy');
+
+    if (_expenses.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.only(top: 32),
+        child: Center(
+          child: Text(
+            'Chưa có chi tiêu nào',
+            style: TextStyle(color: Color(0xFF9CA3AF), fontSize: 14),
+          ),
+        ),
+      );
+    }
+
+    return Column(
+      children: _expenses.map((e) {
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: const Color(0xFFE8E8E8),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        e['title'] as String,
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF1F2937),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        _buildExpenseSubtitle(e, dateFormatter),
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w400,
+                          color: Color(0xFF6B7280),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  formatter.format(e['amount'] as double),
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF1F2937),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  String _buildExpenseSubtitle(
+    Map<String, dynamic> e,
+    DateFormat dateFormatter,
+  ) {
+    final d = e['date'];
+    final dateStr = d is DateTime ? dateFormatter.format(d) : '';
+
+    final subtitle = e['subtitle'] as String?;
+    if (subtitle != null && subtitle.isNotEmpty) {
+      return dateStr.isNotEmpty ? '$subtitle · $dateStr' : subtitle;
+    }
+
+    final payerRaw = (e['payer'] ?? '').toString();
+    final payerName = _displayName(_normalizeId(payerRaw));
+    final splitRaw = (e['splitMode'] ?? '').toString();
+
+    String splitDesc;
+    if (splitRaw.contains('percent')) {
+      splitDesc = 'Phần trăm';
+    } else if (splitRaw.contains('perPerson') ||
+        splitRaw.contains('per_person')) {
+      splitDesc = 'Theo người';
+    } else {
+      splitDesc = 'Chia đều';
+    }
+
+    final base = payerName.isNotEmpty
+        ? '$payerName đã trả - $splitDesc'
+        : splitDesc;
+    return dateStr.isNotEmpty ? '$base · $dateStr' : base;
   }
 
   Map<String, double> _computeNetBalances() {
@@ -270,10 +685,8 @@ class _FinanceMainScreenState extends State<FinanceMainScreen> {
           : 0.0;
       final payerRaw = (e['payer'] ?? '').toString();
       final payer = _normalizeId(payerRaw);
-
       final splitRaw = (e['splitMode'] ?? '').toString();
 
-      // default: equal split among all members
       Map<String, double> shares = {for (var m in members) m: 0.0};
 
       if (splitRaw.contains('percent')) {
@@ -304,26 +717,31 @@ class _FinanceMainScreenState extends State<FinanceMainScreen> {
             : members;
         final sc = selected.isNotEmpty ? selected.length : 1;
         final perShare = amount / sc;
-        for (final m in members)
+        for (final m in members) {
           shares[m] = selected.contains(m) ? perShare : 0.0;
+        }
       } else {
-        // equal
         final per = amount / members.length;
-        for (final m in members) shares[m] = per;
+        for (final m in members) {
+          shares[m] = per;
+        }
       }
 
-      // Update net balances relative to 'you'
       if (payer == 'you') {
-        // you paid => others owe you their share
         for (final m in members) {
           if (m == 'you') continue;
           net[m] = (net[m] ?? 0.0) + (shares[m] ?? 0.0);
         }
       } else {
-        // someone else paid => you may owe them your share
         final youShare = shares['you'] ?? 0.0;
-        net[payer] =
-            (net[payer] ?? 0.0) - youShare; // negative means you owe them
+        net[payer] = (net[payer] ?? 0.0) - youShare;
+      }
+    }
+
+    // Apply recorded settlements (deltas) so confirmed payments remove/reduce debts
+    for (final m in members) {
+      if (_settlements.containsKey(m)) {
+        net[m] = (net[m] ?? 0.0) + (_settlements[m] ?? 0.0);
       }
     }
 
@@ -352,225 +770,5 @@ class _FinanceMainScreenState extends State<FinanceMainScreen> {
       default:
         return id;
     }
-  }
-
-  Widget _buildExpensesList(NumberFormat formatter) {
-    final expenses = _expenses;
-    final dateFormatter = DateFormat('dd/MM/yyyy');
-
-    return Column(
-      children: expenses
-          .map(
-            (e) => Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 14,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade200,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            e['title'] as String,
-                            style: const TextStyle(fontWeight: FontWeight.w700),
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            (() {
-                              final d = e['date'];
-                              final dateStr = d is DateTime
-                                  ? dateFormatter.format(d)
-                                  : (d?.toString() ?? '');
-
-                              final subtitle = e['subtitle'] as String?;
-                              if (subtitle != null && subtitle.isNotEmpty) {
-                                return '$subtitle · $dateStr';
-                              }
-
-                              // fallback: try to build subtitle from payer / splitMode
-                              final payerRaw = (e['payer'] ?? '').toString();
-                              String payerName;
-                              final pr = payerRaw.toLowerCase();
-                              if (pr == 'you' ||
-                                  payerRaw == 'bạn' ||
-                                  pr == 'ban')
-                                payerName = 'Bạn';
-                              else if (pr == 'an')
-                                payerName = 'An';
-                              else if (pr == 'binh' || pr == 'bình')
-                                payerName = 'Bình';
-                              else if (pr == 'chi')
-                                payerName = 'Chi';
-                              else if (payerRaw.isEmpty)
-                                payerName = '';
-                              else
-                                payerName = payerRaw;
-
-                              final splitRaw = (e['splitMode'] ?? '')
-                                  .toString();
-                              String splitDesc;
-                              if (splitRaw.contains('percent'))
-                                splitDesc = 'Phần trăm';
-                              else if (splitRaw.contains('perPerson') ||
-                                  splitRaw.contains('per_person'))
-                                splitDesc = 'Theo người';
-                              else
-                                splitDesc = 'Chia đều';
-
-                              if (payerName.isNotEmpty)
-                                return '$payerName đã trả - $splitDesc · $dateStr';
-                              return '$splitDesc · $dateStr';
-                            })(),
-                            style: const TextStyle(
-                              color: Colors.grey,
-                              fontSize: 12,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      formatter.format(e['amount'] as double),
-                      style: const TextStyle(fontWeight: FontWeight.w900),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          )
-          .toList(),
-    );
-  }
-
-  Widget _buildHeader() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: 18),
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          colors: [Color(0xFF8E54E9), Color(0xFF5A31D8)],
-        ),
-        borderRadius: BorderRadius.only(
-          topLeft: Radius.circular(18),
-          topRight: Radius.circular(18),
-          bottomLeft: Radius.circular(18),
-          bottomRight: Radius.circular(18),
-        ),
-      ),
-      child: const Center(
-        child: Text(
-          'Tài chính',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildBigBalanceCard(
-    String title,
-    double amount, {
-    required bool isPositive,
-  }) {
-    final formatter = NumberFormat.currency(locale: 'vi_VN', symbol: 'đ');
-    final bg = isPositive ? const Color(0xFFE8FFF3) : const Color(0xFFFFE8E8);
-    final textColor = isPositive
-        ? const Color(0xFF128C4A)
-        : const Color(0xFFCF2E2E);
-
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(title, style: const TextStyle(color: Colors.grey, fontSize: 12)),
-          const SizedBox(height: 8),
-          Text(
-            formatter.format(amount),
-            style: TextStyle(
-              color: textColor,
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildToggleButtons() {
-    return Row(
-      children: [
-        Expanded(
-          child: GestureDetector(
-            onTap: () => setState(() => _selectedToggle = 0),
-            child: Container(
-              decoration: BoxDecoration(
-                color: _selectedToggle == 0
-                    ? const Color.fromARGB(255, 152, 25, 236)
-                    : Colors.white,
-                borderRadius: BorderRadius.circular(24),
-                border: Border.all(color: AppColors.borderLight),
-              ),
-              padding: const EdgeInsets.symmetric(vertical: 10),
-              child: Center(
-                child: Text(
-                  'Ai nợ ai',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w700,
-                    color: _selectedToggle == 0
-                        ? Colors.white
-                        : AppColors.textPrimary,
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: GestureDetector(
-            onTap: () => setState(() => _selectedToggle = 1),
-            child: Container(
-              decoration: BoxDecoration(
-                color: _selectedToggle == 1
-                    ? const Color.fromARGB(255, 148, 33, 224)
-                    : Colors.white,
-                borderRadius: BorderRadius.circular(24),
-                border: Border.all(color: AppColors.borderLight),
-              ),
-              padding: const EdgeInsets.symmetric(vertical: 10),
-              child: Center(
-                child: Text(
-                  'Chi tiêu',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w700,
-                    color: _selectedToggle == 1
-                        ? Colors.white
-                        : AppColors.textPrimary,
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
   }
 }
