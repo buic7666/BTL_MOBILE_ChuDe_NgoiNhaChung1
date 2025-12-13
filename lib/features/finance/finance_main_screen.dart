@@ -173,7 +173,7 @@ class _FinanceMainScreenState extends State<FinanceMainScreen> {
         .map(
           (e) => {
             'id': e.key,
-            'name': '${_displayName(e.key)} → Bạn',
+            'name': '${_displayName(e.key)} đang nợ bạn',
             'amountValue': e.value,
             'isPositive': true,
           },
@@ -185,7 +185,7 @@ class _FinanceMainScreenState extends State<FinanceMainScreen> {
         .map(
           (e) => {
             'id': e.key,
-            'name': 'Bạn → ${_displayName(e.key)}',
+            'name': 'Bạn đang nợ ${_displayName(e.key)}',
             'amountValue': e.value.abs(),
             'isPositive': false,
           },
