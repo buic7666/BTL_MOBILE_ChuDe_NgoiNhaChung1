@@ -6,6 +6,8 @@ import '../models/house_info.dart';
 import '../models/utility.dart';
 import '../models/shopping_item.dart';
 import 'rules_screen.dart';
+import 'wifi_info_screen.dart';
+import 'emergency_contact_screen.dart';
 
 class HouseBulletinScreen extends StatefulWidget {
   const HouseBulletinScreen({Key? key}) : super(key: key);
@@ -109,6 +111,20 @@ class _HouseBulletinScreenState extends State<HouseBulletinScreen> {
     );
   }
 
+  void _showWiFiInfoScreen() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const WiFiInfoScreen()),
+    );
+  }
+
+  void _showEmergencyContactScreen() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const EmergencyContactScreen()),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -132,7 +148,11 @@ class _HouseBulletinScreenState extends State<HouseBulletinScreen> {
               UtilityGrid(
                 utilities: utilities,
                 onUtilityTap: (index) {
-                  if (index == 3) {
+                  if (index == 0) {
+                    _showWiFiInfoScreen();
+                  } else if (index == 1) {
+                    _showEmergencyContactScreen();
+                  } else if (index == 3) {
                     _showRulesScreen();
                   }
                 },
