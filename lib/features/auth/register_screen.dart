@@ -254,8 +254,9 @@ class _RegisterScreenState extends State<RegisterScreen>
                             ),
                           ),
                           validator: (value) {
-                            if (value == null || value.isEmpty)
+                            if (value == null || value.isEmpty) {
                               return 'Vui lòng nhập họ tên';
+                            }
                             return null;
                           },
                         ),
