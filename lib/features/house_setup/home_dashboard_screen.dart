@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../constants/app_colors.dart';
+import '../bulletin/screens/house_bulletin_screen.dart';
+=======
 import '../finance/finance_main_screen.dart';
 
 class DynamicHomeScreen extends StatefulWidget {
@@ -340,6 +342,8 @@ class _DynamicHomeScreenState extends State<DynamicHomeScreen> {
 
   // TAB 4: Thông tin chung (General Information)
   Widget _buildInfoTab() {
+    return const HouseBulletinScreen();
+=======
     return SafeArea(
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(20.0),

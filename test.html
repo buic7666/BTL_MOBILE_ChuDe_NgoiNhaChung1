@@ -1,0 +1,423 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Dynamic Home (HTML thuần)</title>
+
+  <!-- Material Icons -->
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+
+  <style>
+    :root{
+      --bg: #F6F7FB;
+      --card: #FFFFFF;
+      --accent: #6C63FF;
+      --accent-dark: #4834D4;
+      --text-primary: #0F172A;
+      --muted: #7B7B7B;
+      --success: #2E7D32;
+      --error: #D32F2F;
+      --border-light: #E8EAEE;
+      --radius-lg: 16px;
+      --radius-sm: 8px;
+      --shadow: 0 6px 12px rgba(15,23,42,0.06);
+      font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    }
+
+    html,body{height:100%;margin:0;background:var(--bg);color:var(--text-primary);}
+    .app{
+      max-width:900px;margin:0 auto;display:flex;flex-direction:column;min-height:100vh;
+    }
+
+    /* Body area */
+    .content{flex:1;padding:20px;box-sizing:border-box;}
+    .header{display:flex;align-items:center;justify-content:space-between;}
+    .greeting small{color:var(--muted);display:block;}
+    .greeting h1{margin:4px 0 0;font-size:22px;}
+    .avatar{width:48px;height:48px;border-radius:50%;border:2px solid var(--accent);overflow:hidden;}
+    .avatar img{width:100%;height:100%;object-fit:cover;}
+
+    .section-title{font-size:14px;color:var(--muted);font-weight:700;margin:0 0 12px;}
+    .spacer{height:24px;}
+
+    /* Active chore card */
+    .chore-card{
+      border-radius:20px;padding:20px;color:white;
+      background:linear-gradient(135deg,var(--accent) 0%, var(--accent-dark) 100%);
+      box-shadow: 0 6px 12px rgba(108,99,255,0.25);
+    }
+    .chore-card .pill{background:rgba(255,255,255,0.18);padding:6px 10px;border-radius:20px;font-weight:700;font-size:12px;}
+    .chore-card h2{margin:12px 0 6px;font-size:22px;}
+    .chore-card p{margin:0;color:rgba(255,255,255,0.85);font-size:13px;}
+    .chore-card .time{display:flex;align-items:center;gap:6px;color:rgba(255,255,255,0.9);}
+
+    /* Free card */
+    .free-card{display:flex;gap:16px;align-items:center;padding:20px;border-radius:20px;background:var(--card);border:1px solid #E6E9EE;}
+    .free-card .icon{width:52px;height:52px;border-radius:50%;background:#ECF8F0;display:flex;align-items:center;justify-content:center;font-size:28px;color:#2E7D32;}
+
+    /* Finance cards */
+    .row{display:flex;gap:16px;}
+    .card{
+      background:var(--card);padding:16px;border-radius:16px;box-shadow:var(--shadow);flex:1;border:1px solid var(--border-light);
+    }
+    .small-icon{display:inline-flex;align-items:center;justify-content:center;padding:8px;border-radius:8px;}
+    .amount{font-weight:900;font-size:16px;margin-top:6px;display:block;}
+
+    /* Shopping summary */
+    .shopping{display:flex;align-items:center;gap:16px;padding:16px;background:var(--card);border-radius:12px;border:1px solid var(--border-light);}
+
+    /* Lists */
+    .list-card{background:var(--card);padding:20px;border-radius:16px;box-shadow:var(--shadow);border:1px solid var(--border-light);}
+    .chore-item{display:flex;align-items:center;justify-content:space-between;padding:12px;border-radius:8px;background:var(--bg);border:1px solid #ECEFF3;margin-bottom:12px;}
+    .transaction{display:flex;align-items:center;justify-content:space-between;padding:12px;border-radius:8px;background:var(--bg);border:1px solid #ECEFF3;margin-bottom:12px;}
+
+    /* Info section */
+    .info-section{margin-bottom:24px;}
+    .info-grid{display:flex;flex-direction:column;gap:12px;}
+    .member{display:flex;align-items:center;gap:12px;}
+    .member img{width:40px;height:40px;border-radius:50%;}
+    .setting-item{display:flex;align-items:center;justify-content:space-between;padding:12px;border-radius:8px;background:var(--bg);border:1px solid #ECEFF3;}
+
+    /* Bottom nav */
+    .bottom-nav{
+      position:sticky;bottom:0;background:var(--card);padding:8px 14px;border-top:1px solid #E6E9EE;display:flex;gap:6px;justify-content:space-around;align-items:center;
+    }
+    .nav-item{flex:1;text-align:center;padding:8px 4px;border-radius:12px;color:#6B6B6B;font-size:13px;cursor:pointer;}
+    .nav-item .material-icons{display:block;margin:0 auto 4px;}
+    .nav-item.active{color:var(--accent);font-weight:700;background:rgba(108,99,255,0.06);}
+
+    /* Utilities */
+    .btn{display:inline-block;padding:10px 14px;border-radius:12px;border:none;cursor:pointer;font-weight:700;}
+    .btn-primary{background:white;color:var(--text-primary);}
+    .badge{font-size:12px;background:#EFE9FF;padding:6px 10px;border-radius:12px;color:var(--accent);}
+
+    @media (max-width:640px){
+      .row{flex-direction:column;}
+      .card{width:100%;}
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <!-- MAIN CONTENT -->
+    <div class="content" id="appContent">
+      <!-- Content will be injected by JS -->
+    </div>
+
+    <!-- BOTTOM NAV -->
+    <div class="bottom-nav" role="tablist" aria-label="Navigation">
+      <div class="nav-item active" data-index="0">
+        <span class="material-icons">home</span>
+        Trang chủ
+      </div>
+      <div class="nav-item" data-index="1">
+        <span class="material-icons">cleaning_services</span>
+        Việc nhà
+      </div>
+      <div class="nav-item" data-index="2">
+        <span class="material-icons">account_balance_wallet</span>
+        Tài chính
+      </div>
+      <div class="nav-item" data-index="3">
+        <span class="material-icons">info</span>
+        Thông tin
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /***********************
+     * DỮ LIỆU MÔ PHỎNG
+     ***********************/
+    const userName = "Khánh";
+    const hasChoreToday = true; // đổi false để hiện free state
+    const currentChore = "Đổ rác & Lau bếp";
+    const choreTime = "19:00";
+    const myDebt = -50000; // negative => bạn đang nợ
+    const othersOweMe = 120000;
+    const shoppingItemCount = 3;
+
+    /***********************
+     * DOM & Helpers
+     ***********************/
+    const content = document.getElementById('appContent');
+    const navItems = Array.from(document.querySelectorAll('.nav-item'));
+
+    function vnCurrency(n){
+      return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 }).format(n);
+    }
+
+    function renderHeader(){
+      return `
+        <div class="header">
+          <div class="greeting">
+            <small>Chào buổi sáng, ☀️</small>
+            <h1>${userName}</h1>
+          </div>
+          <div class="avatar" title="${userName}">
+            <img src="https://i.pravatar.cc/150?img=11" alt="${userName}">
+          </div>
+        </div>
+      `;
+    }
+
+    /***********************
+     * TAB RENDERS
+     ***********************/
+    function renderHome(){
+      return `
+        ${renderHeader()}
+        <div class="spacer"></div>
+
+        <div>
+          <div class="section-title">Việc nhà hôm nay</div>
+          <div>
+            ${hasChoreToday ? renderActiveChore() : renderFreeState()}
+          </div>
+        </div>
+
+        <div class="spacer"></div>
+
+        <div>
+          <div class="section-title">Ví của tôi</div>
+          <div class="row">
+            <div class="card">
+              <div style="display:flex;align-items:center;gap:8px;">
+                <div class="small-icon" style="background:rgba(211,47,47,0.1);color:var(--error);border-radius:8px;">
+                  <span class="material-icons">arrow_outward</span>
+                </div>
+                <div>
+                  <div style="color:var(--muted);font-size:12px;">Bạn đang nợ</div>
+                  <div class="amount" style="color:var(--error)">${vnCurrency(Math.abs(myDebt))}</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="card">
+              <div style="display:flex;align-items:center;gap:8px;">
+                <div class="small-icon" style="background:rgba(46,125,50,0.08);color:var(--success);border-radius:8px;">
+                  <span class="material-icons">arrow_downward</span>
+                </div>
+                <div>
+                  <div style="color:var(--muted);font-size:12px;">Bạn được trả</div>
+                  <div class="amount" style="color:var(--success)">${vnCurrency(othersOweMe)}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="spacer"></div>
+
+        <div>
+          <div class="section-title">Đang diễn ra</div>
+          <div class="shopping" style="margin-top:12px;">
+            <span class="material-icons" style="font-size:28px;color:orange;">shopping_cart</span>
+            <div>
+              <div style="font-weight:700;">${shoppingItemCount} món cần mua</div>
+              <div style="color:var(--muted);font-size:12px;">Nước mắm, Giấy vệ sinh...</div>
+            </div>
+            <div style="margin-left:auto;">
+              <button class="btn" onclick="alert('Đi tới danh sách mua sắm')">Xem</button>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderActiveChore(){
+      return `
+        <div class="chore-card">
+          <div style="display:flex;align-items:center;gap:12px;">
+            <div class="pill">Lượt của bạn</div>
+            <div style="margin-left:auto;" class="time">
+              <span class="material-icons" style="font-size:18px;">access_time_filled</span>
+              <span style="font-weight:700">${choreTime}</span>
+            </div>
+          </div>
+          <h2>${currentChore}</h2>
+          <p>Đừng để mọi người chờ nhé!</p>
+          <div style="margin-top:16px;">
+            <button class="btn btn-primary" onclick="markDone()" style="width:100%;padding:12px;border-radius:12px;">Đánh dấu đã xong</button>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderFreeState(){
+      return `
+        <div class="free-card">
+          <div class="icon"><span class="material-icons">weekend</span></div>
+          <div>
+            <div style="font-weight:700;font-size:18px;">Bạn đang rảnh!</div>
+            <div style="color:var(--muted);font-size:13px;">Hôm nay không phải lượt của bạn.</div>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderChoreTab(){
+      // sample list
+      const items = [1,2,3].map(i => `
+        <div class="chore-item">
+          <div>
+            <div style="font-weight:700;">Công việc ${i}</div>
+            <div style="color:var(--muted);font-size:12px;">Thứ ${i+1}</div>
+          </div>
+          <div><input type="checkbox" /></div>
+        </div>
+      `).join('');
+
+      return `
+        ${renderHeader()}
+        <div class="spacer"></div>
+        <div>
+          <h2 style="margin:0 0 12px;font-size:20px;">Quản lý Việc nhà</h2>
+          <div class="list-card">
+            <div style="font-weight:700;margin-bottom:12px;">Công việc của bạn</div>
+            ${items}
+          </div>
+        </div>
+      `;
+    }
+
+    function renderFinanceTab(){
+      const transactions = [1,2,3,4,5].map(i => `
+        <div class="transaction">
+          <div>Giao dịch ${i}</div>
+          <div style="color:var(--error);font-weight:700;">-50.000 đ</div>
+        </div>
+      `).join('');
+
+      return `
+        ${renderHeader()}
+        <div class="spacer"></div>
+
+        <div class="row" style="margin-bottom:18px;">
+          <div class="card">
+            <div style="display:flex;align-items:center;gap:8px;">
+              <div class="small-icon" style="background:rgba(211,47,47,0.1);color:var(--error);"><span class="material-icons">arrow_outward</span></div>
+              <div>
+                <div style="color:var(--muted);font-size:12px;">Bạn đang nợ</div>
+                <div class="amount" style="color:var(--error)">${vnCurrency(Math.abs(myDebt))}</div>
+              </div>
+            </div>
+          </div>
+          <div class="card">
+            <div style="display:flex;align-items:center;gap:8px;">
+              <div class="small-icon" style="background:rgba(46,125,50,0.08);color:var(--success);"><span class="material-icons">arrow_downward</span></div>
+              <div>
+                <div style="color:var(--muted);font-size:12px;">Bạn được trả</div>
+                <div class="amount" style="color:var(--success)">${vnCurrency(othersOweMe)}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="list-card">
+          <div style="font-weight:700;margin-bottom:12px;">Lịch sử giao dịch</div>
+          ${transactions}
+        </div>
+      `;
+    }
+
+    function renderInfoTab(){
+      const members = [
+        {name:'Khánh', role:'Leader', avatar:'https://i.pravatar.cc/150?img=1'},
+        {name:'An', role:'Thành viên', avatar:'https://i.pravatar.cc/150?img=2'},
+        {name:'Bình', role:'Thành viên', avatar:'https://i.pravatar.cc/150?img=3'},
+        {name:'Cường', role:'Thành viên', avatar:'https://i.pravatar.cc/150?img=4'},
+      ].map(m => `
+        <div class="member">
+          <img src="${m.avatar}" alt="${m.name}" />
+          <div style="flex:1;">
+            <div style="font-weight:700;">${m.name}</div>
+            <div style="color:var(--muted);font-size:12px;">${m.role}</div>
+          </div>
+          <div style="color:var(--muted);font-size:14px;">›</div>
+        </div>
+      `).join('');
+
+      return `
+        ${renderHeader()}
+        <div class="spacer"></div>
+
+        <div class="info-section">
+          <div style="font-weight:700;margin-bottom:12px;">Thông tin nhóm</div>
+          <div class="list-card">
+            <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
+              <div style="color:var(--muted);">Tên nhóm:</div>
+              <div style="font-weight:700;">Nhà 123 - Shared House</div>
+            </div>
+            <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
+              <div style="color:var(--muted);">Địa chỉ:</div>
+              <div style="font-weight:700;">Số 123, Đường ABC, Quận XYZ</div>
+            </div>
+            <div style="display:flex;justify-content:space-between;">
+              <div style="color:var(--muted);">Số thành viên:</div>
+              <div style="font-weight:700;">4 người</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="info-section">
+          <div style="font-weight:700;margin-bottom:12px;">Thành viên</div>
+          <div class="list-card">
+            ${members}
+          </div>
+        </div>
+
+        <div class="info-section">
+          <div style="font-weight:700;margin-bottom:12px;">Thiết lập</div>
+          <div class="list-card">
+            <div class="setting-item"><div style="display:flex;align-items:center;gap:12px;"><span class="material-icons" style="color:var(--accent);">edit</span><div style="font-weight:700;">Thay đổi tên nhóm</div></div><div>›</div></div>
+            <div style="height:8px;"></div>
+            <div class="setting-item"><div style="display:flex;align-items:center;gap:12px;"><span class="material-icons" style="color:var(--accent);">group</span><div style="font-weight:700;">Quản lý thành viên</div></div><div>›</div></div>
+            <div style="height:8px;"></div>
+            <div class="setting-item"><div style="display:flex;align-items:center;gap:12px;"><span class="material-icons" style="color:var(--accent);">notifications</span><div style="font-weight:700;">Cài đặt thông báo</div></div><div>›</div></div>
+            <div style="height:8px;"></div>
+            <div class="setting-item"><div style="display:flex;align-items:center;gap:12px;"><span class="material-icons" style="color:var(--accent);">info</span><div style="font-weight:700;">Về ứng dụng</div></div><div>›</div></div>
+          </div>
+        </div>
+      `;
+    }
+
+    /***********************
+     * ACTIONS
+     ***********************/
+    function markDone(){
+      alert('Đã đánh dấu hoàn thành! (Chỉ mô phỏng)');
+      // Trong app thực tế sẽ gọi API / cập nhật state
+    }
+
+    function setActiveTab(index){
+      // update nav UI
+      navItems.forEach(n => n.classList.remove('active'));
+      const active = navItems.find(n => n.dataset.index == index);
+      if(active) active.classList.add('active');
+
+      // render content
+      let html = '';
+      switch(Number(index)){
+        case 0: html = renderHome(); break;
+        case 1: html = renderChoreTab(); break;
+        case 2: html = renderFinanceTab(); break;
+        case 3: html = renderInfoTab(); break;
+        default: html = renderHome();
+      }
+      content.innerHTML = html;
+    }
+
+    // nav click handlers
+    navItems.forEach(item => {
+      item.addEventListener('click', () => {
+        setActiveTab(item.dataset.index);
+      });
+    });
+
+    // initial render
+    setActiveTab(0);
+  </script>
+</body>
+</html>
