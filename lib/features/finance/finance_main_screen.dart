@@ -41,15 +41,9 @@ class _FinanceMainScreenState extends State<FinanceMainScreen> {
       backgroundColor: AppColors.bgLight,
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
-          final scaffoldMessenger = ScaffoldMessenger.of(context);
-          final result = await showModalBottomSheet<Map<String, dynamic>>(
-            context: context,
-            isScrollControlled: true,
-            backgroundColor: Colors.transparent,
-            builder: (_) => const AddExpenseScreen(),
+          final result = await Navigator.of(context).push<Map<String, dynamic>>(
+            MaterialPageRoute(builder: (_) => const AddExpenseScreen()),
           );
-
-          if (!mounted) return;
 
           if (result != null) {
             final prevNet = _computeNetBalances();
@@ -107,7 +101,7 @@ class _FinanceMainScreenState extends State<FinanceMainScreen> {
             }
 
             if (messages.isNotEmpty) {
-              scaffoldMessenger.showSnackBar(
+              ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Text(messages.join('\n')),
                   duration: const Duration(seconds: 4),
@@ -130,7 +124,7 @@ class _FinanceMainScreenState extends State<FinanceMainScreen> {
                 children: [
                   Expanded(
                     child: _buildBigBalanceCard(
-                      'Số tiền bạn được trả ',
+                      'Người nợ bạn',
                       totalOweYou,
                       isPositive: true,
                     ),
@@ -138,7 +132,7 @@ class _FinanceMainScreenState extends State<FinanceMainScreen> {
                   const SizedBox(width: 12),
                   Expanded(
                     child: _buildBigBalanceCard(
-                      'Số tiền bạn đang nợ ',
+                      'Bạn đang nợ',
                       totalYouOwe,
                       isPositive: false,
                     ),
@@ -173,7 +167,7 @@ class _FinanceMainScreenState extends State<FinanceMainScreen> {
         .map(
           (e) => {
             'id': e.key,
-            'name': '${_displayName(e.key)} đang nợ bạn',
+            'name': '${_displayName(e.key)} → Bạn',
             'amountValue': e.value,
             'isPositive': true,
           },
@@ -185,7 +179,7 @@ class _FinanceMainScreenState extends State<FinanceMainScreen> {
         .map(
           (e) => {
             'id': e.key,
-            'name': 'Bạn đang nợ ${_displayName(e.key)}',
+            'name': 'Bạn → ${_displayName(e.key)}',
             'amountValue': e.value.abs(),
             'isPositive': false,
           },
@@ -199,19 +193,18 @@ class _FinanceMainScreenState extends State<FinanceMainScreen> {
       );
     }
 
-    final combined = [...owesYou, ...youOwe];
-
-    if (combined.isEmpty) {
-      return const Padding(
-        padding: EdgeInsets.only(top: 12),
-        child: Center(child: Text('Không có khoản nợ')),
-      );
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: combined
-          .map(
+    Widget makeSection(String title, List<Map<String, dynamic>> list) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8.0),
+            child: Text(
+              title,
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ),
+          ...list.map(
             (e) => Padding(
               padding: const EdgeInsets.only(bottom: 12),
               child: Container(
@@ -262,8 +255,17 @@ class _FinanceMainScreenState extends State<FinanceMainScreen> {
                 ),
               ),
             ),
-          )
-          .toList(),
+          ),
+        ],
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (owesYou.isNotEmpty) makeSection('Người nợ bạn', owesYou),
+        if (youOwe.isNotEmpty) makeSection('Bạn đang nợ', youOwe),
+      ],
     );
   }
 
