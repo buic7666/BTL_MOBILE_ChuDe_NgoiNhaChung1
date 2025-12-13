@@ -11,13 +11,14 @@ class ForgotPasswordScreen extends StatefulWidget {
   State<ForgotPasswordScreen> createState() => _ForgotPasswordScreenState();
 }
 
-class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> with TickerProviderStateMixin {
+class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
+    with TickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _phoneController = TextEditingController();
   bool _isEmailSelected = true; // Email is primary (focused)
   bool _isLoading = false;
-// Store generated OTP for demo
+  // Store generated OTP for demo
   late final AnimationController _animController;
   late final AnimationController _logoController;
   late final Animation<Offset> _headerOffset;
@@ -43,11 +44,21 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> with Ticker
       duration: const Duration(milliseconds: 800),
     );
 
-    _headerOffset = Tween<Offset>(begin: const Offset(0, -0.15), end: Offset.zero).animate(
-      CurvedAnimation(parent: _animController, curve: const Interval(0.0, 0.45, curve: Curves.easeOut)),
+    _headerOffset =
+        Tween<Offset>(begin: const Offset(0, -0.15), end: Offset.zero).animate(
+          CurvedAnimation(
+            parent: _animController,
+            curve: const Interval(0.0, 0.45, curve: Curves.easeOut),
+          ),
+        );
+    _headerOpacity = CurvedAnimation(
+      parent: _animController,
+      curve: const Interval(0.0, 0.45, curve: Curves.easeOut),
     );
-    _headerOpacity = CurvedAnimation(parent: _animController, curve: const Interval(0.0, 0.45, curve: Curves.easeOut));
-    _formOpacity = CurvedAnimation(parent: _animController, curve: const Interval(0.35, 1.0, curve: Curves.easeIn));
+    _formOpacity = CurvedAnimation(
+      parent: _animController,
+      curve: const Interval(0.35, 1.0, curve: Curves.easeIn),
+    );
 
     // Logo animation controller (repeating scale + fade)
     _logoController = AnimationController(
@@ -71,11 +82,15 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> with Ticker
 
     setState(() => _isLoading = true);
     try {
-      final contactInfo = _isEmailSelected ? _emailController.text.trim() : _phoneController.text.trim();
-      
+      final contactInfo = _isEmailSelected
+          ? _emailController.text.trim()
+          : _phoneController.text.trim();
+
       // Check if account exists
-      final accountExists = await AuthService().resetPassword(email: contactInfo);
-      
+      final accountExists = await AuthService().resetPassword(
+        email: contactInfo,
+      );
+
       if (!accountExists) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -91,19 +106,21 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> with Ticker
 
       // Generate OTP for demo
       final generatedOTP = AppUtils.generateOTP(length: 6);
-      
+
       // Print OTP to console/terminal for testing
       print('═══════════════════════════════════════════════════');
       print('🔐 OTP CODE FOR TESTING: $generatedOTP');
       print('═══════════════════════════════════════════════════');
-      
+
       // Simulate sending reset code (mock)
       await Future.delayed(const Duration(milliseconds: 1500));
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('✓ Mã đặt lại đã được gửi đến $contactInfo\n(Xem terminal để lấy mã)'),
+            content: Text(
+              '✓ Mã đặt lại đã được gửi đến $contactInfo\n(Xem terminal để lấy mã)',
+            ),
             duration: const Duration(seconds: 4),
           ),
         );
@@ -111,7 +128,10 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> with Ticker
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (_) => VerifyCodeScreen(contactInfo: contactInfo, correctOTP: generatedOTP),
+            builder: (_) => VerifyCodeScreen(
+              contactInfo: contactInfo,
+              correctOTP: generatedOTP,
+            ),
           ),
         );
       }
@@ -120,7 +140,11 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> with Ticker
     }
   }
 
-  Widget _buildSocialButton({required IconData icon, required String label, required VoidCallback onTap}) {
+  Widget _buildSocialButton({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+  }) {
     return GestureDetector(
       onTap: onTap,
       child: CircleAvatar(
@@ -146,7 +170,10 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> with Ticker
       body: SafeArea(
         child: SingleChildScrollView(
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 20.0),
+            padding: const EdgeInsets.symmetric(
+              horizontal: 24.0,
+              vertical: 20.0,
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
@@ -177,7 +204,11 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> with Ticker
                                   ),
                                 ],
                               ),
-                              child: const Icon(Icons.lock_reset, size: 40, color: AppColors.bgWhite),
+                              child: const Icon(
+                                Icons.lock_reset,
+                                size: 40,
+                                color: AppColors.bgWhite,
+                              ),
                             ),
                           ),
                         ),
@@ -210,19 +241,31 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> with Ticker
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(
-                              color: _isEmailSelected ? const Color.fromARGB(255, 8, 20, 240) : AppColors.borderLight,
+                              color: _isEmailSelected
+                                  ? const Color.fromARGB(255, 8, 20, 240)
+                                  : AppColors.borderLight,
                               width: _isEmailSelected ? 2.0 : 1.0,
                             ),
-                            color: _isEmailSelected ? const Color.fromARGB(255, 14, 33, 241).withOpacity(0.08) : AppColors.bgWhite,
+                            color: _isEmailSelected
+                                ? const Color.fromARGB(
+                                    255,
+                                    14,
+                                    33,
+                                    241,
+                                  ).withOpacity(0.08)
+                                : AppColors.bgWhite,
                           ),
                           child: TextFormField(
                             controller: _emailController,
                             keyboardType: TextInputType.emailAddress,
-                            onTap: () => setState(() => _isEmailSelected = true),
+                            onTap: () =>
+                                setState(() => _isEmailSelected = true),
                             validator: (value) {
                               if (_isEmailSelected) {
-                                if (value == null || value.isEmpty) return 'Vui lòng nhập email';
-                                if (!AppUtils.isValidEmail(value)) return 'Email không hợp lệ';
+                                if (value == null || value.isEmpty)
+                                  return 'Vui lòng nhập email';
+                                if (!AppUtils.isValidEmail(value))
+                                  return 'Email không hợp lệ';
                               }
                               return null;
                             },
@@ -230,7 +273,10 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> with Ticker
                               labelText: 'Email',
                               hintText: 'example@mail.com',
                               border: InputBorder.none,
-                              contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+                              contentPadding: EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 18,
+                              ),
                             ),
                           ),
                         ),
@@ -258,17 +304,22 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> with Ticker
                           child: TextFormField(
                             controller: _phoneController,
                             keyboardType: TextInputType.phone,
-                            onTap: () => setState(() => _isEmailSelected = false),
+                            onTap: () =>
+                                setState(() => _isEmailSelected = false),
                             validator: (value) {
                               if (!_isEmailSelected) {
-                                if (value == null || value.isEmpty) return 'Vui lòng nhập số điện thoại';
+                                if (value == null || value.isEmpty)
+                                  return 'Vui lòng nhập số điện thoại';
                               }
                               return null;
                             },
                             decoration: const InputDecoration(
                               hintText: 'Số điện thoại',
                               border: InputBorder.none,
-                              contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+                              contentPadding: EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 18,
+                              ),
                             ),
                           ),
                         ),
@@ -284,15 +335,28 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> with Ticker
                   onPressed: _isLoading ? null : _handleSendCode,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color.fromARGB(255, 14, 29, 241),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     elevation: 8,
                   ),
                   child: _isLoading
-                      ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: AppColors.bgWhite, strokeWidth: 2))
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                            color: AppColors.bgWhite,
+                            strokeWidth: 2,
+                          ),
+                        )
                       : const Text(
                           'Gửi mã',
-                          style: TextStyle(color: AppColors.bgWhite, fontSize: 16, fontWeight: FontWeight.w700),
+                          style: TextStyle(
+                            color: AppColors.bgWhite,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
                 ),
 
@@ -304,13 +368,20 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> with Ticker
                   children: [
                     const Text(
                       'Đã có tài khoản? ',
-                      style: TextStyle(color: Color.fromARGB(255, 30, 30, 30), fontSize: 14),
+                      style: TextStyle(
+                        color: Color.fromARGB(255, 30, 30, 30),
+                        fontSize: 14,
+                      ),
                     ),
                     GestureDetector(
                       onTap: () => Navigator.pop(context),
                       child: const Text(
                         'Đăng nhập',
-                        style: TextStyle(color: Color.fromARGB(255, 17, 29, 249), fontWeight: FontWeight.w700, fontSize: 14),
+                        style: TextStyle(
+                          color: Color.fromARGB(255, 17, 29, 249),
+                          fontWeight: FontWeight.w700,
+                          fontSize: 14,
+                        ),
                       ),
                     ),
                   ],
@@ -318,17 +389,32 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> with Ticker
                 const SizedBox(height: 14),
                 const Text(
                   'Tiếp tục với',
-                  style: TextStyle(color: Color.fromARGB(255, 21, 21, 21), fontSize: 14),
+                  style: TextStyle(
+                    color: Color.fromARGB(255, 21, 21, 21),
+                    fontSize: 14,
+                  ),
                 ),
                 const SizedBox(height: 12),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    _buildSocialButton(icon: Icons.g_mobiledata, label: 'G', onTap: () {}),
+                    _buildSocialButton(
+                      icon: Icons.g_mobiledata,
+                      label: 'G',
+                      onTap: () {},
+                    ),
                     const SizedBox(width: 12),
-                    _buildSocialButton(icon: Icons.facebook, label: 'F', onTap: () {}),
+                    _buildSocialButton(
+                      icon: Icons.facebook,
+                      label: 'F',
+                      onTap: () {},
+                    ),
                     const SizedBox(width: 12),
-                    _buildSocialButton(icon: Icons.apple, label: 'A', onTap: () {}),
+                    _buildSocialButton(
+                      icon: Icons.apple,
+                      label: 'A',
+                      onTap: () {},
+                    ),
                   ],
                 ),
                 const SizedBox(height: 18),
