@@ -41,6 +41,7 @@ class _FinanceMainScreenState extends State<FinanceMainScreen> {
       backgroundColor: AppColors.bgLight,
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
+          final scaffoldMessenger = ScaffoldMessenger.of(context);
           final result = await showModalBottomSheet<Map<String, dynamic>>(
             context: context,
             isScrollControlled: true,
@@ -106,7 +107,7 @@ class _FinanceMainScreenState extends State<FinanceMainScreen> {
             }
 
             if (messages.isNotEmpty) {
-              ScaffoldMessenger.of(context).showSnackBar(
+              scaffoldMessenger.showSnackBar(
                 SnackBar(
                   content: Text(messages.join('\n')),
                   duration: const Duration(seconds: 4),
