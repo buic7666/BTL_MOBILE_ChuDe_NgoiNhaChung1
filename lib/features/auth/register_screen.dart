@@ -10,7 +10,8 @@ class RegisterScreen extends StatefulWidget {
   State<RegisterScreen> createState() => _RegisterScreenState();
 }
 
-class _RegisterScreenState extends State<RegisterScreen> with TickerProviderStateMixin {
+class _RegisterScreenState extends State<RegisterScreen>
+    with TickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _contactController = TextEditingController(); // email or phone
@@ -45,11 +46,21 @@ class _RegisterScreenState extends State<RegisterScreen> with TickerProviderStat
       duration: const Duration(milliseconds: 800),
     );
 
-    _headerOffset = Tween<Offset>(begin: const Offset(0, -0.15), end: Offset.zero).animate(
-      CurvedAnimation(parent: _animController, curve: const Interval(0.0, 0.45, curve: Curves.easeOut)),
+    _headerOffset =
+        Tween<Offset>(begin: const Offset(0, -0.15), end: Offset.zero).animate(
+          CurvedAnimation(
+            parent: _animController,
+            curve: const Interval(0.0, 0.45, curve: Curves.easeOut),
+          ),
+        );
+    _headerOpacity = CurvedAnimation(
+      parent: _animController,
+      curve: const Interval(0.0, 0.45, curve: Curves.easeOut),
     );
-    _headerOpacity = CurvedAnimation(parent: _animController, curve: const Interval(0.0, 0.45, curve: Curves.easeOut));
-    _formOpacity = CurvedAnimation(parent: _animController, curve: const Interval(0.35, 1.0, curve: Curves.easeIn));
+    _formOpacity = CurvedAnimation(
+      parent: _animController,
+      curve: const Interval(0.35, 1.0, curve: Curves.easeIn),
+    );
 
     // Logo animation controller (repeating scale + fade)
     _logoController = AnimationController(
@@ -75,7 +86,7 @@ class _RegisterScreenState extends State<RegisterScreen> with TickerProviderStat
     try {
       final contactInfo = _contactController.text.trim();
       final isEmail = contactInfo.contains('@');
-      
+
       final result = await _authService.register(
         contact: contactInfo,
         isEmail: isEmail,
@@ -108,7 +119,11 @@ class _RegisterScreenState extends State<RegisterScreen> with TickerProviderStat
     }
   }
 
-  Widget _buildSocialButton({required IconData icon, required String label, required VoidCallback onTap}) {
+  Widget _buildSocialButton({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+  }) {
     return GestureDetector(
       onTap: onTap,
       child: CircleAvatar(
@@ -134,7 +149,10 @@ class _RegisterScreenState extends State<RegisterScreen> with TickerProviderStat
       body: SafeArea(
         child: SingleChildScrollView(
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 20.0),
+            padding: const EdgeInsets.symmetric(
+              horizontal: 24.0,
+              vertical: 20.0,
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
@@ -165,7 +183,11 @@ class _RegisterScreenState extends State<RegisterScreen> with TickerProviderStat
                                   ),
                                 ],
                               ),
-                              child: const Icon(Icons.person_add, size: 40, color: AppColors.bgWhite),
+                              child: const Icon(
+                                Icons.person_add,
+                                size: 40,
+                                color: AppColors.bgWhite,
+                              ),
                             ),
                           ),
                         ),
@@ -201,118 +223,147 @@ class _RegisterScreenState extends State<RegisterScreen> with TickerProviderStat
                   child: Form(
                     key: _formKey,
                     child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      // Name field (optional)
-                      TextFormField(
-                        controller: _nameController,
-                        textInputAction: TextInputAction.next,
-                        decoration: InputDecoration(
-                          labelText: 'Họ và tên',
-                          hintText: 'Nhập họ tên của bạn',
-                          filled: true,
-                          fillColor: AppColors.bgWhite,
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(color: AppColors.borderLight, width: 1.0),
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        // Name field (optional)
+                        TextFormField(
+                          controller: _nameController,
+                          textInputAction: TextInputAction.next,
+                          decoration: InputDecoration(
+                            labelText: 'Họ và tên',
+                            hintText: 'Nhập họ tên của bạn',
+                            filled: true,
+                            fillColor: AppColors.bgWhite,
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(
+                                color: AppColors.borderLight,
+                                width: 1.0,
+                              ),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(
+                                color: const Color.fromARGB(255, 19, 11, 240),
+                                width: 2.0,
+                              ),
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 18,
+                            ),
                           ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(color: const Color.fromARGB(255, 19, 11, 240), width: 2.0),
-                          ),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+                          validator: (value) {
+                            if (value == null || value.isEmpty)
+                              return 'Vui lòng nhập họ tên';
+                            return null;
+                          },
                         ),
-                        validator: (value) {
-                          if (value == null || value.isEmpty) return 'Vui lòng nhập họ tên';
-                          return null;
-                        },
-                      ),
 
-                      const SizedBox(height: 12),
+                        const SizedBox(height: 12),
 
-                      // Contact field - email or phone (accepts both)
-                      TextFormField(
-                        controller: _contactController,
-                        keyboardType: TextInputType.text,
-                        textInputAction: TextInputAction.next,
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Vui lòng nhập email hoặc số điện thoại';
-                          }
-                          // Basic validation: either email format or non-empty
-                          final isEmail = value.contains('@');
-                          if (isEmail && !AppUtils.isValidEmail(value)) {
-                            return 'Email không hợp lệ';
-                          }
-                          return null;
-                        },
-                        decoration: InputDecoration(
-                          labelText: 'Email hoặc Số điện thoại',
-                          hintText: 'example@mail.com hoặc 0123456789',
-                          filled: true,
-                          fillColor: AppColors.bgWhite,
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(color: AppColors.borderLight, width: 1.0),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(color: const Color.fromARGB(255, 27, 11, 240), width: 2.0),
-                          ),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-
-                      // Password - gray background, no border
-                      Container(
-                        decoration: BoxDecoration(
-                          color: AppColors.bgGrey,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: TextFormField(
-                          controller: _passwordController,
-                          obscureText: true,
+                        // Contact field - email or phone (accepts both)
+                        TextFormField(
+                          controller: _contactController,
+                          keyboardType: TextInputType.text,
                           textInputAction: TextInputAction.next,
                           validator: (value) {
-                            if (value == null || value.isEmpty) return 'Vui lòng nhập mật khẩu';
-                            if (!AppUtils.isValidPassword(value)) return 'Mật khẩu phải có ít nhất 6 ký tự';
+                            if (value == null || value.isEmpty) {
+                              return 'Vui lòng nhập email hoặc số điện thoại';
+                            }
+                            // Basic validation: either email format or non-empty
+                            final isEmail = value.contains('@');
+                            if (isEmail && !AppUtils.isValidEmail(value)) {
+                              return 'Email không hợp lệ';
+                            }
                             return null;
                           },
-                          decoration: const InputDecoration(
-                            hintText: 'Mật khẩu',
-                            border: InputBorder.none,
-                            contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+                          decoration: InputDecoration(
+                            labelText: 'Email hoặc Số điện thoại',
+                            hintText: 'example@mail.com hoặc 0123456789',
+                            filled: true,
+                            fillColor: AppColors.bgWhite,
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(
+                                color: AppColors.borderLight,
+                                width: 1.0,
+                              ),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(
+                                color: const Color.fromARGB(255, 27, 11, 240),
+                                width: 2.0,
+                              ),
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 18,
+                            ),
                           ),
                         ),
-                      ),
-                      const SizedBox(height: 10),
+                        const SizedBox(height: 12),
 
-                      // Confirm password - gray background, no border
-                      Container(
-                        decoration: BoxDecoration(
-                          color: AppColors.bgGrey,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: TextFormField(
-                          controller: _confirmPasswordController,
-                          obscureText: true,
-                          textInputAction: TextInputAction.done,
-                          validator: (value) {
-                            if (value == null || value.isEmpty) return 'Vui lòng xác nhận mật khẩu';
-                            if (value != _passwordController.text) return 'Mật khẩu không trùng khớp';
-                            return null;
-                          },
-                          decoration: const InputDecoration(
-                            hintText: 'Xác nhận mật khẩu',
-                            border: InputBorder.none,
-                            contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+                        // Password - gray background, no border
+                        Container(
+                          decoration: BoxDecoration(
+                            color: AppColors.bgGrey,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: TextFormField(
+                            controller: _passwordController,
+                            obscureText: true,
+                            textInputAction: TextInputAction.next,
+                            validator: (value) {
+                              if (value == null || value.isEmpty)
+                                return 'Vui lòng nhập mật khẩu';
+                              if (!AppUtils.isValidPassword(value))
+                                return 'Mật khẩu phải có ít nhất 6 ký tự';
+                              return null;
+                            },
+                            decoration: const InputDecoration(
+                              hintText: 'Mật khẩu',
+                              border: InputBorder.none,
+                              contentPadding: EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 18,
+                              ),
+                            ),
                           ),
                         ),
-                      ),
-                    ],
+                        const SizedBox(height: 10),
+
+                        // Confirm password - gray background, no border
+                        Container(
+                          decoration: BoxDecoration(
+                            color: AppColors.bgGrey,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: TextFormField(
+                            controller: _confirmPasswordController,
+                            obscureText: true,
+                            textInputAction: TextInputAction.done,
+                            validator: (value) {
+                              if (value == null || value.isEmpty)
+                                return 'Vui lòng xác nhận mật khẩu';
+                              if (value != _passwordController.text)
+                                return 'Mật khẩu không trùng khớp';
+                              return null;
+                            },
+                            decoration: const InputDecoration(
+                              hintText: 'Xác nhận mật khẩu',
+                              border: InputBorder.none,
+                              contentPadding: EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 18,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
                 ),
 
                 const SizedBox(height: 28),
@@ -322,15 +373,28 @@ class _RegisterScreenState extends State<RegisterScreen> with TickerProviderStat
                   onPressed: _isLoading ? null : _handleRegister,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color.fromARGB(255, 10, 13, 241),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     elevation: 6,
                   ),
                   child: _isLoading
-                      ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: AppColors.bgWhite, strokeWidth: 2))
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                            color: AppColors.bgWhite,
+                            strokeWidth: 2,
+                          ),
+                        )
                       : const Text(
                           'Đăng ký',
-                          style: TextStyle(color: AppColors.bgWhite, fontSize: 16, fontWeight: FontWeight.w700),
+                          style: TextStyle(
+                            color: AppColors.bgWhite,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
                 ),
 
@@ -342,11 +406,23 @@ class _RegisterScreenState extends State<RegisterScreen> with TickerProviderStat
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    _buildSocialButton(icon: Icons.g_mobiledata, label: 'G', onTap: () {}),
+                    _buildSocialButton(
+                      icon: Icons.g_mobiledata,
+                      label: 'G',
+                      onTap: () {},
+                    ),
                     const SizedBox(width: 12),
-                    _buildSocialButton(icon: Icons.facebook, label: 'F', onTap: () {}),
+                    _buildSocialButton(
+                      icon: Icons.facebook,
+                      label: 'F',
+                      onTap: () {},
+                    ),
                     const SizedBox(width: 12),
-                    _buildSocialButton(icon: Icons.apple, label: 'A', onTap: () {}),
+                    _buildSocialButton(
+                      icon: Icons.apple,
+                      label: 'A',
+                      onTap: () {},
+                    ),
                   ],
                 ),
                 const SizedBox(height: 18),
