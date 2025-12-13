@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../constants/app_colors.dart';
 import '../bulletin/screens/house_bulletin_screen.dart';
-=======
 import '../finance/finance_main_screen.dart';
 
 class DynamicHomeScreen extends StatefulWidget {
@@ -343,69 +342,6 @@ class _DynamicHomeScreenState extends State<DynamicHomeScreen> {
   // TAB 4: Thông tin chung (General Information)
   Widget _buildInfoTab() {
     return const HouseBulletinScreen();
-=======
-    return SafeArea(
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(20.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              "Thông tin chung",
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: AppColors.textPrimary,
-              ),
-            ),
-            const SizedBox(height: 24),
-
-            // Thông tin nhóm
-            _buildInfoSection("Thông tin nhóm", [
-              _buildInfoItemRow("Tên nhóm:", "Nhà 123 - Shared House"),
-              _buildInfoItemRow("Địa chỉ:", "Số 123, Đường ABC, Quận XYZ"),
-              _buildInfoItemRow("Số thành viên:", "4 người"),
-            ]),
-
-            const SizedBox(height: 24),
-
-            // Danh sách thành viên
-            _buildInfoSection("Thành viên", [
-              _buildMemberItem(
-                "Khánh",
-                "Leader",
-                "https://i.pravatar.cc/150?img=1",
-              ),
-              _buildMemberItem(
-                "An",
-                "Thành viên",
-                "https://i.pravatar.cc/150?img=2",
-              ),
-              _buildMemberItem(
-                "Bình",
-                "Thành viên",
-                "https://i.pravatar.cc/150?img=3",
-              ),
-              _buildMemberItem(
-                "Cường",
-                "Thành viên",
-                "https://i.pravatar.cc/150?img=4",
-              ),
-            ]),
-
-            const SizedBox(height: 24),
-
-            // Thiết lập
-            _buildInfoSection("Thiết lập", [
-              _buildSettingItem("Thay đổi tên nhóm", Icons.edit),
-              _buildSettingItem("Quản lý thành viên", Icons.group),
-              _buildSettingItem("Cài đặt thông báo", Icons.notifications),
-              _buildSettingItem("Về ứng dụng", Icons.info),
-            ]),
-          ],
-        ),
-      ),
-    );
   }
 
   // Helper widget cho phần thông tin
