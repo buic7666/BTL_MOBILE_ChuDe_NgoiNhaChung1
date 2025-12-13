@@ -41,7 +41,6 @@ class _FinanceMainScreenState extends State<FinanceMainScreen> {
       backgroundColor: AppColors.bgLight,
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
-          final scaffoldMessenger = ScaffoldMessenger.of(context);
           final result = await showModalBottomSheet<Map<String, dynamic>>(
             context: context,
             isScrollControlled: true,
@@ -107,7 +106,7 @@ class _FinanceMainScreenState extends State<FinanceMainScreen> {
             }
 
             if (messages.isNotEmpty) {
-              scaffoldMessenger.showSnackBar(
+              ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Text(messages.join('\n')),
                   duration: const Duration(seconds: 4),
@@ -130,7 +129,7 @@ class _FinanceMainScreenState extends State<FinanceMainScreen> {
                 children: [
                   Expanded(
                     child: _buildBigBalanceCard(
-                      'Người nợ bạn',
+                      'Số tiền bạn được trả ',
                       totalOweYou,
                       isPositive: true,
                     ),
@@ -138,7 +137,7 @@ class _FinanceMainScreenState extends State<FinanceMainScreen> {
                   const SizedBox(width: 12),
                   Expanded(
                     child: _buildBigBalanceCard(
-                      'Bạn đang nợ',
+                      'Số tiền bạn đang nợ ',
                       totalYouOwe,
                       isPositive: false,
                     ),
@@ -266,12 +265,71 @@ class _FinanceMainScreenState extends State<FinanceMainScreen> {
       );
     }
 
+    final combined = [...owesYou, ...youOwe];
+
+    if (combined.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.only(top: 12),
+        child: Center(child: Text('Không có khoản nợ')),
+      );
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        if (owesYou.isNotEmpty) makeSection('Người nợ bạn', owesYou),
-        if (youOwe.isNotEmpty) makeSection('Bạn đang nợ', youOwe),
-      ],
+      children: combined
+          .map(
+            (e) => Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.03),
+                      blurRadius: 8,
+                    ),
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    CircleAvatar(
+                      backgroundColor: const Color(0xFFB39DDB),
+                      child: Text((_displayName((e['id'] as String))[0])),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            e['name'] as String,
+                            style: const TextStyle(fontWeight: FontWeight.w600),
+                          ),
+                          const SizedBox(height: 4),
+                          const Text(
+                            'Nhấn để thanh toán',
+                            style: TextStyle(fontSize: 12, color: Colors.grey),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Text(
+                      formatter.format((e['amountValue'] as double)),
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        color: (e['isPositive'] as bool)
+                            ? AppColors.success
+                            : AppColors.error,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          )
+          .toList(),
     );
   }
 
