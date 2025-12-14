@@ -96,34 +96,18 @@ class _DynamicHomeScreenState extends State<DynamicHomeScreen> {
     switch (index) {
       case 0:
         return _buildHomeTab(userName, hasChoreToday, currentChore, myDebt, othersOweMe, shoppingItemCount);
-        return _buildHomeTab(
-          userName,
-          hasChoreToday,
-          currentChore,
-          myDebt,
-          othersOweMe,
-          shoppingItemCount,
-        );
       case 1:
         return _buildChoreTab();
       case 2:
         return const FinanceMainScreen();
       case 3:
-        return _buildInfoTab();
+        return const HouseBulletinScreen();
       default:
-        return _buildHomeTab(
-          userName,
-          hasChoreToday,
-          currentChore,
-          myDebt,
-          othersOweMe,
-          shoppingItemCount,
-        );
+        return _buildHomeTab(userName, hasChoreToday, currentChore, myDebt, othersOweMe, shoppingItemCount);
     }
   }
 
   // ================= TAB HOME =================
-  // TAB 1: Trang chủ (Home)
   Widget _buildHomeTab(
     String userName,
     bool hasChoreToday,
@@ -150,9 +134,6 @@ class _DynamicHomeScreenState extends State<DynamicHomeScreen> {
             ),
             const SizedBox(height: 12),
             hasChoreToday ? _buildActiveChoreCard(currentChore) : _buildFreeStateCard(),
-            hasChoreToday
-                ? _buildActiveChoreCard(currentChore)
-                : _buildFreeStateCard(),
             const SizedBox(height: 24),
             const Text(
               "Ví của tôi",
@@ -199,38 +180,7 @@ class _DynamicHomeScreenState extends State<DynamicHomeScreen> {
     );
   }
 
-  // ================= TAB FINANCE =================
-  Widget _buildFinanceTab(double myDebt, double othersOweMe) {
-    final formatter = NumberFormat.currency(locale: 'vi_VN', symbol: 'đ');
-
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text("Quản lý Tài chính", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 24),
-            Text("Bạn đang nợ: ${formatter.format(myDebt.abs())}", style: const TextStyle(color: Colors.red)),
-            const SizedBox(height: 12),
-            Text("Bạn được trả: ${formatter.format(othersOweMe)}", style: const TextStyle(color: Colors.green)),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // ================= TAB INFO =================
-  Widget _buildInfoTab() {
-    return const SafeArea(
-      child: Center(
-        child: Text("Thông tin chung", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-      ),
-    );
-  }
-
-  // ================= WIDGETS CON =================
-  // TAB 2: Quản lý Việc nhà (Chore Management)
+  // ================= TAB CHORES =================
   Widget _buildChoreTab() {
     return SafeArea(
       child: SingleChildScrollView(
@@ -271,7 +221,6 @@ class _DynamicHomeScreenState extends State<DynamicHomeScreen> {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  // Placeholder cho các công việc
                   ListView.builder(
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
@@ -294,57 +243,12 @@ class _DynamicHomeScreenState extends State<DynamicHomeScreen> {
       ),
     );
   }
-  // TAB 4: Thông tin chung (General Information)
-  Widget _buildInfoTab() {
-    return const HouseBulletinScreen();
-  }
 
-
-
-  // Helper widget cho mục công việc
-  Widget _buildChoreItem(String title, String date) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: AppColors.bgLight,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: AppColors.borderLight),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: const TextStyle(
-                  fontWeight: FontWeight.w600,
-                  fontSize: 14,
-                ),
-              ),
-              Text(
-                date,
-                style: const TextStyle(fontSize: 12, color: Colors.grey),
-              ),
-            ],
-          ),
-          Checkbox(value: false, onChanged: (value) {}),
-        ],
-      ),
-    );
-  }
-  // --- WIDGETS CON ---
-
+  // ================= WIDGETS CON =================
   Widget _buildHeader(String name) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          const Text("Chào buổi sáng ☀️", style: TextStyle(color: Colors.grey)),
-          Text(name, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-        ]),
-        const CircleAvatar(radius: 22, backgroundImage: NetworkImage("https://i.pravatar.cc/150?img=11")),
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -363,7 +267,7 @@ class _DynamicHomeScreenState extends State<DynamicHomeScreen> {
           ],
         ),
         Container(
-          padding: const EdgeInsets.all(2), // Border
+          padding: const EdgeInsets.all(2),
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             border: Border.all(color: AppColors.accentPurple, width: 2),
@@ -450,9 +354,7 @@ class _DynamicHomeScreenState extends State<DynamicHomeScreen> {
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
-              onPressed: () {
-                /* Logic Done */
-              },
+              onPressed: () {},
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.white,
                 foregroundColor: AppColors.textPrimary,
@@ -469,30 +371,13 @@ class _DynamicHomeScreenState extends State<DynamicHomeScreen> {
           ),
         ],
       ),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        const Text("Lượt của bạn", style: TextStyle(color: Colors.white70)),
-        const SizedBox(height: 8),
-        Text(choreName, style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold)),
-        const SizedBox(height: 16),
-        ElevatedButton(
-          onPressed: () {},
-          style: ElevatedButton.styleFrom(backgroundColor: Colors.white),
-          child: const Text("Đánh dấu đã xong"),
-        )
-      ]),
     );
   }
 
   Widget _buildFreeStateCard() {
     return Container(
+      width: double.infinity,
       padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20)),
-      child: const Text("Hôm nay bạn không có việc 🎉"),
-    );
-  }
-
-  Widget _buildFinanceCard(String title, double amount, {required bool isNegative}) {
-    final color = isNegative ? Colors.red : Colors.green;
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
@@ -529,7 +414,6 @@ class _DynamicHomeScreenState extends State<DynamicHomeScreen> {
     );
   }
 
-  // Card Tài chính (Hiển thị số tiền cụ thể)
   Widget _buildFinanceCard(
     String title,
     double amount, {
@@ -537,17 +421,10 @@ class _DynamicHomeScreenState extends State<DynamicHomeScreen> {
   }) {
     final color = isNegative ? AppColors.error : AppColors.success;
     final icon = isNegative ? Icons.arrow_outward : Icons.arrow_downward;
-    // Format tiền việt
     final formatter = NumberFormat.currency(locale: 'vi_VN', symbol: 'đ');
 
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text(title, style: const TextStyle(color: Colors.grey)),
-        const SizedBox(height: 6),
-        Text(formatter.format(amount.abs()), style: TextStyle(color: color, fontWeight: FontWeight.bold)),
-      ]),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
@@ -570,7 +447,7 @@ class _DynamicHomeScreenState extends State<DynamicHomeScreen> {
           Text(title, style: const TextStyle(color: Colors.grey, fontSize: 12)),
           const SizedBox(height: 4),
           Text(
-            formatter.format(amount.abs()), // Lấy giá trị tuyệt đối để hiển thị
+            formatter.format(amount.abs()),
             style: TextStyle(
               color: color,
               fontSize: 16,
@@ -585,8 +462,6 @@ class _DynamicHomeScreenState extends State<DynamicHomeScreen> {
   Widget _buildShoppingSummary(int count) {
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
-      child: Text("$count món cần mua"),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
@@ -623,10 +498,41 @@ class _DynamicHomeScreenState extends State<DynamicHomeScreen> {
               size: 16,
               color: Colors.grey,
             ),
-            onPressed: () {
-              /* Navigate to Bulletin */
-            },
+            onPressed: () {},
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildChoreItem(String title, String date) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.bgLight,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: AppColors.borderLight),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 14,
+                ),
+              ),
+              Text(
+                date,
+                style: const TextStyle(fontSize: 12, color: Colors.grey),
+              ),
+            ],
+          ),
+          Checkbox(value: false, onChanged: (value) {}),
         ],
       ),
     );

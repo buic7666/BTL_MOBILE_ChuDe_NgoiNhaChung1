@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
-import '../../constants/app_colors.dart';
 import 'add_expense_screen.dart';
 import 'payment_screen.dart';
 
@@ -24,9 +23,6 @@ class _FinanceMainScreenState extends State<FinanceMainScreen> {
       'payer': 'An',
     },
   ];
-
-  // In-memory wallet balance (simple demo state)
-  double _walletBalance = 0.0;
 
   // Track settlements per member (positive/negative deltas applied to net balances)
   final Map<String, double> _settlements = {};
@@ -472,12 +468,6 @@ class _FinanceMainScreenState extends State<FinanceMainScreen> {
             // If action == 'paid' => you paid member (you owed them)
             final delta = action == 'received' ? -amountValue : amountValue;
             _settlements[memberId] = (_settlements[memberId] ?? 0.0) + delta;
-
-            if (action == 'received') {
-              _walletBalance += amountValue;
-            } else {
-              _walletBalance -= amountValue;
-            }
           });
 
           final nf = NumberFormat.currency(locale: 'vi_VN', symbol: 'đ');
