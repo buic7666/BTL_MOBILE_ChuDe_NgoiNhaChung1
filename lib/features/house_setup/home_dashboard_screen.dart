@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../constants/app_colors.dart';
+import '../chores/screens/dashboard_screen.dart';
 import '../bulletin/screens/house_bulletin_screen.dart';
 import '../finance/finance_main_screen.dart';
 
@@ -16,7 +17,7 @@ class _DynamicHomeScreenState extends State<DynamicHomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // --- GIẢ LẬP DỮ LIỆU ĐỘNG (Sau này lấy từ Firebase) ---
+    // --- GIẢ LẬP DỮ LIỆU ĐỘNG ---
     final String userName = "Khánh";
     final bool hasChoreToday = true;
     final String currentChore = "Đổ rác & Lau bếp";
@@ -38,9 +39,19 @@ class _DynamicHomeScreenState extends State<DynamicHomeScreen> {
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
         onTap: (index) {
-          setState(() {
-            _selectedIndex = index;
-          });
+          if (index == 1) {
+            // 👉 TAB "VIỆC NHÀ" → MỞ DASHBOARD CHORES WHEEL
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => const DashboardScreen(),
+              ),
+            );
+          } else {
+            setState(() {
+              _selectedIndex = index;
+            });
+          }
         },
         type: BottomNavigationBarType.fixed,
         backgroundColor: Colors.white,
@@ -84,6 +95,7 @@ class _DynamicHomeScreenState extends State<DynamicHomeScreen> {
   ) {
     switch (index) {
       case 0:
+        return _buildHomeTab(userName, hasChoreToday, currentChore, myDebt, othersOweMe, shoppingItemCount);
         return _buildHomeTab(
           userName,
           hasChoreToday,
@@ -110,6 +122,7 @@ class _DynamicHomeScreenState extends State<DynamicHomeScreen> {
     }
   }
 
+  // ================= TAB HOME =================
   // TAB 1: Trang chủ (Home)
   Widget _buildHomeTab(
     String userName,
@@ -121,7 +134,7 @@ class _DynamicHomeScreenState extends State<DynamicHomeScreen> {
   ) {
     return SafeArea(
       child: SingleChildScrollView(
-        padding: const EdgeInsets.all(20.0),
+        padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -136,6 +149,7 @@ class _DynamicHomeScreenState extends State<DynamicHomeScreen> {
               ),
             ),
             const SizedBox(height: 12),
+            hasChoreToday ? _buildActiveChoreCard(currentChore) : _buildFreeStateCard(),
             hasChoreToday
                 ? _buildActiveChoreCard(currentChore)
                 : _buildFreeStateCard(),
@@ -185,6 +199,37 @@ class _DynamicHomeScreenState extends State<DynamicHomeScreen> {
     );
   }
 
+  // ================= TAB FINANCE =================
+  Widget _buildFinanceTab(double myDebt, double othersOweMe) {
+    final formatter = NumberFormat.currency(locale: 'vi_VN', symbol: 'đ');
+
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text("Quản lý Tài chính", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 24),
+            Text("Bạn đang nợ: ${formatter.format(myDebt.abs())}", style: const TextStyle(color: Colors.red)),
+            const SizedBox(height: 12),
+            Text("Bạn được trả: ${formatter.format(othersOweMe)}", style: const TextStyle(color: Colors.green)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ================= TAB INFO =================
+  Widget _buildInfoTab() {
+    return const SafeArea(
+      child: Center(
+        child: Text("Thông tin chung", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+      ),
+    );
+  }
+
+  // ================= WIDGETS CON =================
   // TAB 2: Quản lý Việc nhà (Chore Management)
   Widget _buildChoreTab() {
     return SafeArea(
@@ -295,6 +340,11 @@ class _DynamicHomeScreenState extends State<DynamicHomeScreen> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
+        Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          const Text("Chào buổi sáng ☀️", style: TextStyle(color: Colors.grey)),
+          Text(name, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+        ]),
+        const CircleAvatar(radius: 22, backgroundImage: NetworkImage("https://i.pravatar.cc/150?img=11")),
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -327,10 +377,8 @@ class _DynamicHomeScreenState extends State<DynamicHomeScreen> {
     );
   }
 
-  // Card khi CÓ việc nhà (Màu sắc nổi bật, thúc giục hành động)
   Widget _buildActiveChoreCard(String choreName) {
     return Container(
-      width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
@@ -421,14 +469,30 @@ class _DynamicHomeScreenState extends State<DynamicHomeScreen> {
           ),
         ],
       ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        const Text("Lượt của bạn", style: TextStyle(color: Colors.white70)),
+        const SizedBox(height: 8),
+        Text(choreName, style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 16),
+        ElevatedButton(
+          onPressed: () {},
+          style: ElevatedButton.styleFrom(backgroundColor: Colors.white),
+          child: const Text("Đánh dấu đã xong"),
+        )
+      ]),
     );
   }
 
-  // Card khi KHÔNG có việc (Màu nhẹ nhàng, thư giãn)
   Widget _buildFreeStateCard() {
     return Container(
-      width: double.infinity,
       padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20)),
+      child: const Text("Hôm nay bạn không có việc 🎉"),
+    );
+  }
+
+  Widget _buildFinanceCard(String title, double amount, {required bool isNegative}) {
+    final color = isNegative ? Colors.red : Colors.green;
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
@@ -478,6 +542,12 @@ class _DynamicHomeScreenState extends State<DynamicHomeScreen> {
 
     return Container(
       padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text(title, style: const TextStyle(color: Colors.grey)),
+        const SizedBox(height: 6),
+        Text(formatter.format(amount.abs()), style: TextStyle(color: color, fontWeight: FontWeight.bold)),
+      ]),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
@@ -512,10 +582,11 @@ class _DynamicHomeScreenState extends State<DynamicHomeScreen> {
     );
   }
 
-  // Card Shopping rút gọn
   Widget _buildShoppingSummary(int count) {
     return Container(
       padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
+      child: Text("$count món cần mua"),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
