@@ -8,6 +8,7 @@ import '../models/shopping_item.dart';
 import 'rules_screen.dart';
 import 'wifi_info_screen.dart';
 import 'emergency_contact_screen.dart';
+import 'utilities_info_screen.dart';
 
 class HouseBulletinScreen extends StatefulWidget {
   const HouseBulletinScreen({Key? key}) : super(key: key);
@@ -125,6 +126,13 @@ class _HouseBulletinScreenState extends State<HouseBulletinScreen> {
     );
   }
 
+  void _showUtilitiesInfoScreen() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const UtilitiesInfoScreen()),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -152,6 +160,8 @@ class _HouseBulletinScreenState extends State<HouseBulletinScreen> {
                     _showWiFiInfoScreen();
                   } else if (index == 1) {
                     _showEmergencyContactScreen();
+                  } else if (index == 2) {
+                    _showUtilitiesInfoScreen();
                   } else if (index == 3) {
                     _showRulesScreen();
                   }

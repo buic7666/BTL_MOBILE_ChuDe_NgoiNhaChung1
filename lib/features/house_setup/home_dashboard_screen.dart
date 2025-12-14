@@ -39,19 +39,9 @@ class _DynamicHomeScreenState extends State<DynamicHomeScreen> {
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
         onTap: (index) {
-          if (index == 1) {
-            // 👉 TAB "VIỆC NHÀ" → MỞ DASHBOARD CHORES WHEEL
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => const DashboardScreen(),
-              ),
-            );
-          } else {
-            setState(() {
-              _selectedIndex = index;
-            });
-          }
+          setState(() {
+            _selectedIndex = index;
+          });
         },
         type: BottomNavigationBarType.fixed,
         backgroundColor: Colors.white,
@@ -97,7 +87,7 @@ class _DynamicHomeScreenState extends State<DynamicHomeScreen> {
       case 0:
         return _buildHomeTab(userName, hasChoreToday, currentChore, myDebt, othersOweMe, shoppingItemCount);
       case 1:
-        return _buildChoreTab();
+        return const DashboardScreen();
       case 2:
         return const FinanceMainScreen();
       case 3:
