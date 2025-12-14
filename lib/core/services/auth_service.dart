@@ -82,10 +82,7 @@ class AuthService {
   }
 
   /// Đăng nhập (mock) - hỗ trợ email hoặc số điện thoại
-  Future<bool> login({
-    required String email,
-    required String password,
-  }) async {
+  Future<bool> login({required String email, required String password}) async {
     try {
       // If there is a registered user, validate password
       if (_userPasswords.containsKey(email)) {
@@ -150,7 +147,10 @@ class AuthService {
   }
 
   /// Cập nhật mật khẩu mới (sau khi xác minh OTP)
-  Future<bool> updatePassword({required String email, required String newPassword}) async {
+  Future<bool> updatePassword({
+    required String email,
+    required String newPassword,
+  }) async {
     try {
       if (!_userPasswords.containsKey(email)) {
         print('Email not found for password update: $email');

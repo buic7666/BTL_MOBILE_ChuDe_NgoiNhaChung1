@@ -5,10 +5,10 @@ import 'models/user_profile_house_ext.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   // Initialize SharedPreferences
   await UserProfileHouseExt.initializeFromStorage();
-  
+
   runApp(const MyApp());
 }
 
@@ -25,7 +25,8 @@ class MyApp extends StatelessWidget {
         useMaterial3: true,
         fontFamily: 'Roboto',
       ),
-      home: const HomeScreen(), // Main welcome screen with Login/Register actions
+      home:
+          const HomeScreen(), // Main welcome screen with Login/Register actions
     );
   }
 }

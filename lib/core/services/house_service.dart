@@ -13,7 +13,7 @@ class HouseService {
 
   // Mock house data - Map từ userId -> house info
   final Map<String, Map<String, String?>> _userHouses = {};
-  
+
   // Mock house codes - Map từ houseCode -> house info
   final Map<String, Map<String, String>> _houseCodes = {
     'DEMO01': {
@@ -28,12 +28,15 @@ class HouseService {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
     final random = Random();
     String code;
-    
+
     // Tạo mã mới cho đến khi không trùng
     do {
-      code = List.generate(6, (_) => chars[random.nextInt(chars.length)]).join();
+      code = List.generate(
+        6,
+        (_) => chars[random.nextInt(chars.length)],
+      ).join();
     } while (_houseCodes.containsKey(code));
-    
+
     return code;
   }
 
@@ -46,21 +49,21 @@ class HouseService {
     try {
       // Tạo mã nhà mới
       final houseCode = _generateHouseCode();
-      
+
       // Lưu vào _houseCodes
       _houseCodes[houseCode] = {
         'name': name,
         'address': address ?? '',
         'ownerId': userId,
       };
-      
+
       // Lưu vào _userHouses
       _userHouses[userId] = {
         'name': name,
         'address': address,
         'code': houseCode,
       };
-      
+
       print('House created for user $userId: $name with code $houseCode');
       return houseCode;
     } catch (e) {
@@ -111,15 +114,17 @@ class HouseService {
 
       // Lấy thông tin nhà từ mã
       final houseInfo = _houseCodes[houseCode]!;
-      
+
       // Gán nhà cho user
       _userHouses[userId] = {
         'name': houseInfo['name'],
         'address': houseInfo['address'],
         'code': houseCode,
       };
-      
-      print('User $userId joined house: ${houseInfo['name']} with code $houseCode');
+
+      print(
+        'User $userId joined house: ${houseInfo['name']} with code $houseCode',
+      );
       return true;
     } catch (e) {
       print('Error joining house by code: $e');
