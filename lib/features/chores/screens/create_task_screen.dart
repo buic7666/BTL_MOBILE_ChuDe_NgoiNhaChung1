@@ -29,6 +29,10 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
     );
   }
 
+  void cancel() {
+    Navigator.pop(context);
+  }
+
   InputDecoration _inputDecoration(String hint) {
     return InputDecoration(
       hintText: hint,
@@ -43,8 +47,46 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
     );
   }
 
+  Widget _gradientButton({
+    required String text,
+    required VoidCallback onPressed,
+    required List<Color> colors,
+    required double width,
+  }) {
+    return SizedBox(
+      width: width,
+      height: 50, // 👈 CÙNG CHIỀU CAO
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(colors: colors),
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: ElevatedButton(
+          onPressed: onPressed,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.transparent,
+            shadowColor: Colors.transparent,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14),
+            ),
+          ),
+          child: const Text(
+            "Huỷ",
+            style: TextStyle(
+              fontSize: 16, // 👈 CÙNG FONT
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
@@ -53,7 +95,6 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // ===== TITLE =====
               const Center(
                 child: Text(
                   "Tạo Việc Nhà",
@@ -67,7 +108,6 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
 
               const SizedBox(height: 28),
 
-              // ===== TÊN VIỆC =====
               const Text(
                 "Tên việc:",
                 style: TextStyle(
@@ -84,7 +124,6 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
 
               const SizedBox(height: 18),
 
-              // ===== CHU KỲ =====
               const Text(
                 "Chu kỳ lặp",
                 style: TextStyle(
@@ -110,7 +149,6 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
 
               const SizedBox(height: 18),
 
-              // ===== NGƯỜI THỰC HIỆN =====
               const Text(
                 "Người thực hiện",
                 style: TextStyle(
@@ -136,7 +174,7 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
 
               const SizedBox(height: 30),
 
-              // ===== BUTTON =====
+              // ===== NÚT TẠO (FULL WIDTH) =====
               SizedBox(
                 width: double.infinity,
                 height: 50,
@@ -162,6 +200,42 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
                         color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 14),
+
+              // ===== NÚT HUỶ (NGẮN HƠN, GIỮA) =====
+              Center(
+                child: SizedBox(
+                  width: screenWidth * 0.45, // 👈 NGẮN HƠN
+                  height: 50,
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF7B8CFF), Color(0xFF9B8CFF)],
+                      ),
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: ElevatedButton(
+                      onPressed: cancel,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.transparent,
+                        shadowColor: Colors.transparent,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                      child: const Text(
+                        "Huỷ",
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
                       ),
                     ),
                   ),
