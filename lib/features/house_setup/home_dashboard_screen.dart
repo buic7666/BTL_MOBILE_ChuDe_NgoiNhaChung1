@@ -4,6 +4,8 @@ import '../../constants/app_colors.dart';
 import '../chores/screens/dashboard_screen.dart';
 import '../bulletin/screens/house_bulletin_screen.dart';
 import '../finance/finance_main_screen.dart';
+import '../../core/services/auth_service.dart';
+import 'home_screen.dart';
 
 class DynamicHomeScreen extends StatefulWidget {
   const DynamicHomeScreen({super.key});
@@ -27,6 +29,35 @@ class _DynamicHomeScreenState extends State<DynamicHomeScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.bgLight,
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        title: const Text(
+          'Trang chủ',
+          style: TextStyle(color: AppColors.textPrimary),
+        ),
+        actions: [
+          PopupMenuButton<String>(
+            onSelected: (value) async {
+              if (value == 'logout') {
+                // Đăng xuất và quay về màn hình Home (đăng nhập/đăng ký)
+                await AuthService().logout();
+                if (!context.mounted) return;
+                Navigator.of(context).pushAndRemoveUntil(
+                  MaterialPageRoute(builder: (_) => const HomeScreen()),
+                  (route) => false,
+                );
+              }
+            },
+            itemBuilder: (ctx) => const [
+              PopupMenuItem(
+                value: 'logout',
+                child: Text('Đăng xuất'),
+              ),
+            ],
+          ),
+        ],
+      ),
       body: _buildBody(
         _selectedIndex,
         userName,
@@ -171,68 +202,6 @@ class _DynamicHomeScreenState extends State<DynamicHomeScreen> {
   }
 
   // ================= TAB CHORES =================
-  Widget _buildChoreTab() {
-    return SafeArea(
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(20.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              "Quản lý Việc nhà",
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: AppColors.textPrimary,
-              ),
-            ),
-            const SizedBox(height: 24),
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 10,
-                  ),
-                ],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    "Công việc của bạn",
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.textPrimary,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  ListView.builder(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: 3,
-                    itemBuilder: (context, index) {
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 12),
-                        child: _buildChoreItem(
-                          "Công việc ${index + 1}",
-                          "Thứ ${index + 2}",
-                        ),
-                      );
-                    },
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 
   // ================= WIDGETS CON =================
   Widget _buildHeader(String name) {
@@ -495,36 +464,4 @@ class _DynamicHomeScreenState extends State<DynamicHomeScreen> {
     );
   }
 
-  Widget _buildChoreItem(String title, String date) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: AppColors.bgLight,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: AppColors.borderLight),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: const TextStyle(
-                  fontWeight: FontWeight.w600,
-                  fontSize: 14,
-                ),
-              ),
-              Text(
-                date,
-                style: const TextStyle(fontSize: 12, color: Colors.grey),
-              ),
-            ],
-          ),
-          Checkbox(value: false, onChanged: (value) {}),
-        ],
-      ),
-    );
-  }
 }

@@ -2,12 +2,16 @@ import 'package:flutter/material.dart';
 import 'constants/app_colors.dart';
 import 'features/house_setup/home_screen.dart';
 import 'models/user_profile_house_ext.dart';
+import 'firebase_options.dart';
+import 'package:firebase_core/firebase_core.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
-  // Initialize SharedPreferences
   await UserProfileHouseExt.initializeFromStorage();
+  // Initialize SharedPreferences
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
 
   runApp(const MyApp());
 }

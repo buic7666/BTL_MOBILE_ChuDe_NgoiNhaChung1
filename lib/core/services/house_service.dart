@@ -1,9 +1,12 @@
 // ignore_for_file: avoid_print
 
+import 'dart:async';
 import 'dart:math';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class HouseService {
   static final HouseService _instance = HouseService._internal();
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   factory HouseService() {
     return _instance;
@@ -11,33 +14,47 @@ class HouseService {
 
   HouseService._internal();
 
-  // Mock house data - Map từ userId -> house info
-  final Map<String, Map<String, String?>> _userHouses = {};
-
-  // Mock house codes - Map từ houseCode -> house info
-  final Map<String, Map<String, String>> _houseCodes = {
-    'DEMO01': {
-      'name': 'Nhà Demo',
-      'address': '123 Đường Demo, Hà Nội',
-      'ownerId': 'demo@demo.com',
-    },
-  };
-
   // Tạo mã nhà ngẫu nhiên 6 ký tự (chữ và số)
-  String _generateHouseCode() {
+  Future<String> _generateHouseCode() async {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
     final random = Random();
-    String code;
+    int attempts = 0;
 
-    // Tạo mã mới cho đến khi không trùng
-    do {
-      code = List.generate(
+    while (true) {
+      attempts++;
+      final code = List.generate(
         6,
         (_) => chars[random.nextInt(chars.length)],
       ).join();
-    } while (_houseCodes.containsKey(code));
 
-    return code;
+      try {
+        final existingHouses = await _firestore
+            .collection('houses')
+            .where('code', isEqualTo: code)
+            .limit(1)
+            .get()
+            .timeout(
+              const Duration(seconds: 10),
+              onTimeout: () => throw TimeoutException(
+                'house code query timeout',
+              ),
+            );
+
+        if (existingHouses.docs.isEmpty) {
+          print('DEBUG: code $code available after $attempts attempts');
+          return code; // Mã chưa tồn tại, dùng mã này
+        } else {
+          print('DEBUG: code $code existed, retry attempt $attempts');
+        }
+      } catch (e) {
+        print('DEBUG: _generateHouseCode error: $e');
+        rethrow;
+      }
+
+      if (attempts >= 10) {
+        throw Exception('Unable to generate unique code after $attempts attempts');
+      }
+    }
   }
 
   // Tạo nhà mới cho user hiện tại và trả về mã nhà
@@ -47,57 +64,128 @@ class HouseService {
     String? address,
   }) async {
     try {
+      print('DEBUG: Generating house code...');
       // Tạo mã nhà mới
-      final houseCode = _generateHouseCode();
+      final houseCode = await _generateHouseCode();
+      final now = DateTime.now();
 
-      // Lưu vào _houseCodes
-      _houseCodes[houseCode] = {
-        'name': name,
-        'address': address ?? '',
-        'ownerId': userId,
-      };
+      print('DEBUG: Generated house code: $houseCode');
 
-      // Lưu vào _userHouses
-      _userHouses[userId] = {
-        'name': name,
-        'address': address,
-        'code': houseCode,
-      };
+      // Tạo document mới trong Firestore
+      final houseDoc = _firestore.collection('houses').doc();
+
+      print('DEBUG: Creating house document with id: ${houseDoc.id}');
+
+      try {
+        await houseDoc.set({
+          'id': houseDoc.id,
+          'code': houseCode,
+          'name': name,
+          'address': address ?? '',
+          'ownerId': userId,
+          'members': [userId],
+          'createdAt': Timestamp.fromDate(now),
+          'updatedAt': Timestamp.fromDate(now),
+        }).timeout(
+          const Duration(seconds: 15),
+          onTimeout: () {
+            print('DEBUG: houseDoc.set() timeout!');
+            throw TimeoutException('Firestore set timeout');
+          },
+        );
+        print('DEBUG: House document created. Now updating user document...');
+      } catch (setError) {
+        print('DEBUG: Error in houseDoc.set(): $setError');
+        print('DEBUG: Error type: ${setError.runtimeType}');
+        return null;
+      }
+
+      // Cập nhật (upsert) user document với houseId
+      try {
+        await _firestore
+            .collection('users')
+            .doc(userId)
+            .set({
+          'houseId': houseDoc.id,
+          'updatedAt': Timestamp.fromDate(now),
+        }, SetOptions(merge: true));
+        print('DEBUG: User document updated with houseId');
+      } catch (updateError) {
+        print('DEBUG: Error updating user doc: $updateError');
+        // Nếu update fail, xóa house doc mới tạo
+        await houseDoc.delete();
+        print('DEBUG: Rolled back - deleted house document');
+        return null;
+      }
 
       print('House created for user $userId: $name with code $houseCode');
       return houseCode;
     } catch (e) {
       print('Error creating house: $e');
+      print('Error type: ${e.runtimeType}');
       return null;
     }
   }
 
   // Lấy tên nhà của user
-  String getHouseName(String? userId) {
+  Future<String> getHouseName(String? userId) async {
     if (userId == null) return 'Nhà của bạn';
-    return _userHouses[userId]?['name'] ?? 'Nhà của bạn';
+
+    try {
+      final userDoc = await _firestore.collection('users').doc(userId).get();
+      final houseId = userDoc.data()?['houseId'];
+
+      if (houseId == null) return 'Nhà của bạn';
+
+      final houseDoc = await _firestore.collection('houses').doc(houseId).get();
+      return houseDoc.data()?['name'] ?? 'Nhà của bạn';
+    } catch (e) {
+      print('Error getting house name: $e');
+      return 'Nhà của bạn';
+    }
   }
 
   // Lấy địa chỉ nhà của user
-  String? getHouseAddress(String? userId) {
+  Future<String?> getHouseAddress(String? userId) async {
     if (userId == null) return null;
-    return _userHouses[userId]?['address'];
+
+    try {
+      final userDoc = await _firestore.collection('users').doc(userId).get();
+      final houseId = userDoc.data()?['houseId'];
+
+      if (houseId == null) return null;
+
+      final houseDoc = await _firestore.collection('houses').doc(houseId).get();
+      return houseDoc.data()?['address'];
+    } catch (e) {
+      print('Error getting house address: $e');
+      return null;
+    }
   }
 
   // Kiểm tra user có nhà chưa
-  bool hasHouse(String? userId) {
+  Future<bool> hasHouse(String? userId) async {
     if (userId == null) return false;
-    return _userHouses.containsKey(userId);
+
+    try {
+      final userDoc = await _firestore.collection('users').doc(userId).get();
+      return userDoc.data()?['houseId'] != null;
+    } catch (e) {
+      print('Error checking house: $e');
+      return false;
+    }
   }
 
-  // Xóa thông tin nhà của user (logout)
-  void clearHouse(String userId) {
-    _userHouses.remove(userId);
-  }
-
-  // Xóa tất cả
-  void clearAll() {
-    _userHouses.clear();
+  // Xóa thông tin nhà của user (rời nhà)
+  Future<void> clearHouse(String userId) async {
+    try {
+      await _firestore.collection('users').doc(userId).update({
+        'houseId': FieldValue.delete(),
+        'updatedAt': Timestamp.fromDate(DateTime.now()),
+      });
+    } catch (e) {
+      print('Error clearing house: $e');
+    }
   }
 
   // Tham gia nhà bằng mã
@@ -106,25 +194,38 @@ class HouseService {
     required String houseCode,
   }) async {
     try {
-      // Kiểm tra mã nhà có tồn tại không
-      if (!_houseCodes.containsKey(houseCode)) {
+      // Tìm nhà theo mã
+      final housesQuery = await _firestore
+          .collection('houses')
+          .where('code', isEqualTo: houseCode)
+          .limit(1)
+          .get();
+
+      if (housesQuery.docs.isEmpty) {
         print('House code not found: $houseCode');
         return false;
       }
 
-      // Lấy thông tin nhà từ mã
-      final houseInfo = _houseCodes[houseCode]!;
+      final houseDoc = housesQuery.docs.first;
+      final houseId = houseDoc.id;
+      final now = DateTime.now();
 
-      // Gán nhà cho user
-      _userHouses[userId] = {
-        'name': houseInfo['name'],
-        'address': houseInfo['address'],
-        'code': houseCode,
-      };
+      // Thêm userId vào members của nhà
+      await _firestore.collection('houses').doc(houseId).update({
+        'members': FieldValue.arrayUnion([userId]),
+        'updatedAt': Timestamp.fromDate(now),
+      });
 
-      print(
-        'User $userId joined house: ${houseInfo['name']} with code $houseCode',
-      );
+      // Cập nhật (upsert) user document với houseId
+      await _firestore
+          .collection('users')
+          .doc(userId)
+          .set({
+        'houseId': houseId,
+        'updatedAt': Timestamp.fromDate(now),
+      }, SetOptions(merge: true));
+
+      print('User $userId joined house with code $houseCode');
       return true;
     } catch (e) {
       print('Error joining house by code: $e');
@@ -133,8 +234,20 @@ class HouseService {
   }
 
   // Lấy mã nhà của user (nếu có)
-  String? getHouseCode(String? userId) {
+  Future<String?> getHouseCode(String? userId) async {
     if (userId == null) return null;
-    return _userHouses[userId]?['code'];
+
+    try {
+      final userDoc = await _firestore.collection('users').doc(userId).get();
+      final houseId = userDoc.data()?['houseId'];
+
+      if (houseId == null) return null;
+
+      final houseDoc = await _firestore.collection('houses').doc(houseId).get();
+      return houseDoc.data()?['code'];
+    } catch (e) {
+      print('Error getting house code: $e');
+      return null;
+    }
   }
 }
