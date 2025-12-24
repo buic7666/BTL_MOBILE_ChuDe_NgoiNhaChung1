@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../constants/app_colors.dart';
 import '../../core/services/auth_service.dart';
 import '../../core/utils/app_utils.dart';
+import 'login_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({Key? key}) : super(key: key);
@@ -87,6 +88,19 @@ class _RegisterScreenState extends State<RegisterScreen>
       final contactInfo = _contactController.text.trim();
       final isEmail = contactInfo.contains('@');
 
+      // Chỉ hỗ trợ đăng ký bằng email ở thời điểm hiện tại
+      if (!isEmail) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Hiện chỉ hỗ trợ đăng ký bằng email.'),
+              backgroundColor: Color.fromARGB(255, 229, 57, 53),
+            ),
+          );
+        }
+        return;
+      }
+
       final result = await _authService.register(
         contact: contactInfo,
         isEmail: isEmail,
@@ -94,8 +108,8 @@ class _RegisterScreenState extends State<RegisterScreen>
         name: _nameController.text.trim(),
       );
 
-      if (result) {
-        if (mounted) {
+      if (mounted) {
+        if (result['success'] == true) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('✓ Đăng ký thành công!'),
@@ -103,20 +117,92 @@ class _RegisterScreenState extends State<RegisterScreen>
             ),
           );
           Navigator.pop(context);
-        }
-      } else {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('❌ Đăng ký thất bại! Tài khoản đã tồn tại.'),
-              backgroundColor: Color.fromARGB(255, 229, 57, 53),
-            ),
-          );
+        } else {
+          final errorCode = result['error'] ?? 'unknown';
+          // Nếu email đã tồn tại, hiện dialog để chọn đăng nhập hoặc reset
+          if (errorCode == 'email-already-in-use') {
+            await _showEmailInUseDialog(contactInfo);
+          } else {
+            // Hiện lỗi khác
+            String errorMsg = '❌ Đăng ký thất bại! [$errorCode]';
+            if (errorCode == 'weak-password') {
+              errorMsg = '❌ Mật khẩu quá yếu (tối thiểu 6 ký tự)!';
+            } else if (errorCode == 'invalid-email') {
+              errorMsg = '❌ Email không hợp lệ!';
+            } else if (errorCode == 'operation-not-allowed') {
+              errorMsg = '❌ Chức năng đăng ký chưa được kích hoạt!';
+            } else if (errorCode == 'configuration-not-found') {
+              errorMsg = '❌ Firebase chưa được cấu hình đúng!\nVui lòng bật Email/Password trong Firebase Console.';
+            } else if (errorCode == 'timeout') {
+              errorMsg = '❌ Timeout! Kết nối Firebase quá chậm.';
+            } else if (errorCode == 'phone-not-supported') {
+              errorMsg = '❌ Hiện chỉ hỗ trợ đăng ký bằng email!';
+            }
+            print('REGISTER ERROR: $errorCode - Message: $errorMsg');
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(errorMsg),
+                backgroundColor: const Color.fromARGB(255, 229, 57, 53),
+                duration: const Duration(seconds: 5),
+              ),
+            );
+          }
         }
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  Future<void> _showEmailInUseDialog(String email) async {
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          title: const Text('Email đã tồn tại'),
+          content: Text(
+            'Email $email đã được đăng ký. Bạn muốn đăng nhập hoặc gửi email đặt lại mật khẩu?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () async {
+                // Gửi email đặt lại mật khẩu
+                final ok = await _authService.resetPassword(email: email);
+                if (mounted) {
+                  Navigator.of(ctx).pop();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        ok
+                            ? 'Đã gửi email đặt lại mật khẩu tới $email'
+                            : 'Gửi email đặt lại mật khẩu thất bại',
+                      ),
+                      backgroundColor: ok
+                          ? const Color.fromARGB(255, 21, 208, 97)
+                          : const Color.fromARGB(255, 229, 57, 53),
+                    ),
+                  );
+                }
+              },
+              child: const Text('Gửi reset mật khẩu'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.of(ctx).pop();
+                // Điều hướng sang màn hình đăng nhập
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const LoginScreen(),
+                  ),
+                );
+              },
+              child: const Text('Đăng nhập'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   Widget _buildSocialButton({

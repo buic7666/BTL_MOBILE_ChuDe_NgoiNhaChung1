@@ -17,6 +17,7 @@ class _CreateHouseScreenState extends State<CreateHouseScreen> {
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _addressController = TextEditingController();
+  bool _isSubmitting = false;
 
   @override
   void dispose() {
@@ -26,10 +27,14 @@ class _CreateHouseScreenState extends State<CreateHouseScreen> {
   }
 
   Future<void> _submit() async {
+    if (_isSubmitting) return;
+    setState(() => _isSubmitting = true);
     if (_formKey.currentState?.validate() ?? false) {
       final authService = AuthService();
       final houseService = HouseService();
       final currentUser = authService.currentUser;
+
+      print('DEBUG: Starting house creation for user: ${currentUser?.uid}');
 
       if (currentUser != null) {
         // Tạo nhà và nhận mã nhà
@@ -40,6 +45,8 @@ class _CreateHouseScreenState extends State<CreateHouseScreen> {
               ? _addressController.text.trim()
               : null,
         );
+
+        print('DEBUG: House creation result - houseCode: $houseCode');
 
         if (houseCode != null && mounted) {
           // Navigate to success screen với mã nhà
@@ -52,9 +59,21 @@ class _CreateHouseScreenState extends State<CreateHouseScreen> {
               ),
             ),
           );
+        } else {
+          // Hiển thị error nếu không tạo được nhà
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('❌ Tạo nhà thất bại! Vui lòng thử lại.'),
+                backgroundColor: Color.fromARGB(255, 229, 57, 53),
+                duration: Duration(seconds: 3),
+              ),
+            );
+          }
         }
       }
     }
+    if (mounted) setState(() => _isSubmitting = false);
   }
 
   @override
@@ -308,7 +327,7 @@ class _CreateHouseScreenState extends State<CreateHouseScreen> {
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: ElevatedButton(
-                      onPressed: _submit,
+                      onPressed: _isSubmitting ? null : _submit,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.transparent,
                         shadowColor: Colors.transparent,
@@ -317,14 +336,25 @@ class _CreateHouseScreenState extends State<CreateHouseScreen> {
                         ),
                         padding: const EdgeInsets.symmetric(vertical: 16),
                       ),
-                      child: const Text(
-                        'Tạo ngay',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.textPrimary,
-                        ),
-                      ),
+                      child: _isSubmitting
+                          ? const SizedBox(
+                              width: 22,
+                              height: 22,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2.5,
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  AppColors.textPrimary,
+                                ),
+                              ),
+                            )
+                          : const Text(
+                              'Tạo ngay',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.textPrimary,
+                              ),
+                            ),
                     ),
                   ),
                 ),
