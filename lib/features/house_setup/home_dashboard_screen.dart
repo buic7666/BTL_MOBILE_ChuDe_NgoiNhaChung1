@@ -5,6 +5,7 @@ import '../chores/screens/dashboard_screen.dart';
 import '../bulletin/screens/house_bulletin_screen.dart';
 import '../finance/finance_main_screen.dart';
 import '../../core/services/auth_service.dart';
+import '../../core/services/house_service.dart';
 import 'home_screen.dart';
 
 class DynamicHomeScreen extends StatefulWidget {
@@ -17,16 +18,58 @@ class DynamicHomeScreen extends StatefulWidget {
 class _DynamicHomeScreenState extends State<DynamicHomeScreen> {
   int _selectedIndex = 0;
 
+  bool _isLoading = true;
+  String _userName = '';
+  String _houseName = '';
+  String _houseCode = '';
+  bool _hasChoreToday = false;
+  String _currentChore = '';
+  double _myDebt = 0;
+  double _othersOweMe = 0;
+  int _shoppingItemCount = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadDashboardData();
+  }
+
+  Future<void> _loadDashboardData() async {
+    final auth = AuthService();
+    final houseService = HouseService();
+
+    final userProfile = await auth.getCurrentUser();
+    final userName = userProfile?.name ?? userProfile?.email ?? 'Người dùng';
+    final uid = auth.currentFirebaseUser?.uid;
+
+    bool hasHouse = false;
+    String houseName = 'Nhà của bạn';
+    String houseCode = '';
+
+    if (uid != null) {
+      hasHouse = await houseService.hasHouse(uid);
+      if (hasHouse) {
+        houseName = await houseService.getHouseName(uid);
+        houseCode = await houseService.getHouseCode(uid) ?? '';
+      }
+    }
+
+    if (!mounted) return;
+    setState(() {
+      _userName = userName;
+      _houseName = houseName;
+      _houseCode = houseCode;
+      _hasChoreToday = hasHouse ? _hasChoreToday : false;
+      _currentChore = _hasChoreToday ? _currentChore : 'Không có việc nhà hôm nay';
+      _myDebt = _myDebt;
+      _othersOweMe = _othersOweMe;
+      _shoppingItemCount = _shoppingItemCount;
+      _isLoading = false;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
-    // --- GIẢ LẬP DỮ LIỆU ĐỘNG ---
-    final String userName = "Khánh";
-    final bool hasChoreToday = true;
-    final String currentChore = "Đổ rác & Lau bếp";
-    final double myDebt = -50000;
-    final double othersOweMe = 120000;
-    final int shoppingItemCount = 3;
-
     return Scaffold(
       backgroundColor: AppColors.bgLight,
       appBar: AppBar(
@@ -58,15 +101,9 @@ class _DynamicHomeScreenState extends State<DynamicHomeScreen> {
           ),
         ],
       ),
-      body: _buildBody(
-        _selectedIndex,
-        userName,
-        hasChoreToday,
-        currentChore,
-        myDebt,
-        othersOweMe,
-        shoppingItemCount,
-      ),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : _buildBody(_selectedIndex),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
         onTap: (index) {
@@ -107,16 +144,10 @@ class _DynamicHomeScreenState extends State<DynamicHomeScreen> {
 
   Widget _buildBody(
     int index,
-    String userName,
-    bool hasChoreToday,
-    String currentChore,
-    double myDebt,
-    double othersOweMe,
-    int shoppingItemCount,
   ) {
     switch (index) {
       case 0:
-        return _buildHomeTab(userName, hasChoreToday, currentChore, myDebt, othersOweMe, shoppingItemCount);
+        return _buildHomeTab();
       case 1:
         return const DashboardScreen();
       case 2:
@@ -124,26 +155,19 @@ class _DynamicHomeScreenState extends State<DynamicHomeScreen> {
       case 3:
         return const HouseBulletinScreen();
       default:
-        return _buildHomeTab(userName, hasChoreToday, currentChore, myDebt, othersOweMe, shoppingItemCount);
+        return _buildHomeTab();
     }
   }
 
   // ================= TAB HOME =================
-  Widget _buildHomeTab(
-    String userName,
-    bool hasChoreToday,
-    String currentChore,
-    double myDebt,
-    double othersOweMe,
-    int shoppingItemCount,
-  ) {
+  Widget _buildHomeTab() {
     return SafeArea(
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildHeader(userName),
+            _buildHeader(_userName, _houseName, _houseCode),
             const SizedBox(height: 24),
             const Text(
               "Việc nhà hôm nay",
@@ -154,7 +178,7 @@ class _DynamicHomeScreenState extends State<DynamicHomeScreen> {
               ),
             ),
             const SizedBox(height: 12),
-            hasChoreToday ? _buildActiveChoreCard(currentChore) : _buildFreeStateCard(),
+            _hasChoreToday ? _buildActiveChoreCard(_currentChore) : _buildFreeStateCard(),
             const SizedBox(height: 24),
             const Text(
               "Ví của tôi",
@@ -170,7 +194,7 @@ class _DynamicHomeScreenState extends State<DynamicHomeScreen> {
                 Expanded(
                   child: _buildFinanceCard(
                     "Bạn đang nợ",
-                    myDebt,
+                    _myDebt,
                     isNegative: true,
                   ),
                 ),
@@ -178,7 +202,7 @@ class _DynamicHomeScreenState extends State<DynamicHomeScreen> {
                 Expanded(
                   child: _buildFinanceCard(
                     "Bạn được trả",
-                    othersOweMe,
+                    _othersOweMe,
                     isNegative: false,
                   ),
                 ),
@@ -194,7 +218,7 @@ class _DynamicHomeScreenState extends State<DynamicHomeScreen> {
               ),
             ),
             const SizedBox(height: 12),
-            _buildShoppingSummary(shoppingItemCount),
+            _buildShoppingSummary(_shoppingItemCount),
           ],
         ),
       ),
@@ -204,7 +228,7 @@ class _DynamicHomeScreenState extends State<DynamicHomeScreen> {
   // ================= TAB CHORES =================
 
   // ================= WIDGETS CON =================
-  Widget _buildHeader(String name) {
+  Widget _buildHeader(String name, String houseName, String houseCode) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -223,6 +247,22 @@ class _DynamicHomeScreenState extends State<DynamicHomeScreen> {
                 color: AppColors.textPrimary,
               ),
             ),
+            const SizedBox(height: 4),
+            Text(
+              houseName,
+              style: const TextStyle(
+                fontSize: 14,
+                color: Colors.grey,
+              ),
+            ),
+            if (houseCode.isNotEmpty)
+              Text(
+                'Mã nhà: $houseCode',
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey,
+                ),
+              ),
           ],
         ),
         Container(

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import '../../constants/app_colors.dart';
 import '../../core/services/auth_service.dart';
 import '../../core/services/house_service.dart';
-import 'home_dashboard_screen.dart';
 import 'create_house_screen.dart';
 import 'enter_house_code_screen.dart';
 
@@ -17,29 +16,7 @@ class _WelcomeHouseScreenState extends State<WelcomeHouseScreen> {
   @override
   void initState() {
     super.initState();
-    _checkAndRedirect();
-  }
-
-  Future<void> _checkAndRedirect() async {
-    try {
-      final auth = AuthService();
-      final user = auth.currentUser;
-      if (user == null) return;
-      final houseService = HouseService();
-      final has = await houseService.hasHouse(user.uid);
-      if (!mounted) return;
-      if (has) {
-        // Nếu user đã có nhà, chuyển thẳng vào dashboard
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (_) => const DynamicHomeScreen(),
-          ),
-        );
-      }
-    } catch (e) {
-      // Bỏ qua lỗi, hiển thị màn chọn tạo/nhập mã
-    }
+    // Không tự động vào nhà; để người dùng tự chọn tạo/nhập mã
   }
 
   Future<bool> _onWillPop(BuildContext context) async {

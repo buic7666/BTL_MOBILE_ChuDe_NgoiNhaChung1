@@ -7,6 +7,7 @@ class ShoppingListCard extends StatelessWidget {
   final Function(ShoppingItem)? onAddItem;
   final Function(int)? onToggleItem;
   final Function(int)? onDeleteItem;
+  final String? houseId;
 
   const ShoppingListCard({
     Key? key,
@@ -14,6 +15,7 @@ class ShoppingListCard extends StatelessWidget {
     this.onAddItem,
     this.onToggleItem,
     this.onDeleteItem,
+    this.houseId,
   }) : super(key: key);
 
   @override
@@ -108,7 +110,7 @@ class ShoppingListCard extends StatelessWidget {
                 );
               },
               icon: const Icon(Icons.add),
-              label: const Text('Thêm mục mới'),
+              label: Text(houseId == null ? 'Cần có houseId' : 'Thêm mục mới'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.orange,
                 foregroundColor: Colors.white,
