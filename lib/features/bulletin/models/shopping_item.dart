@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 class ShoppingItem {
   final String id;
   final String name;
@@ -22,16 +23,30 @@ class ShoppingItem {
   });
 
   factory ShoppingItem.fromJson(Map<String, dynamic> json) {
+    DateTime _toDate(dynamic v) {
+      if (v == null) return DateTime.now();
+      if (v is String) return DateTime.parse(v);
+      // Firestore Timestamp
+      if (v is Timestamp) return v.toDate();
+      return DateTime.now();
+    }
+
+    double? _toDouble(dynamic v) {
+      if (v == null) return null;
+      if (v is num) return v.toDouble();
+      return double.tryParse(v.toString());
+    }
+
     return ShoppingItem(
-      id: json['id'] as String,
-      name: json['name'] as String,
-      quantity: json['quantity'] as String,
-      assignedTo: json['assignedTo'] as String,
+      id: json['id'] as String? ?? '',
+      name: json['name'] as String? ?? '',
+      quantity: json['quantity'] as String? ?? '',
+      assignedTo: json['assignedTo'] as String? ?? '',
       isCompleted: json['isCompleted'] as bool? ?? false,
-      createdAt: DateTime.parse(json['createdAt'] as String),
-      updatedAt: DateTime.parse(json['updatedAt'] as String),
+      createdAt: _toDate(json['createdAt']),
+      updatedAt: _toDate(json['updatedAt']),
       notes: json['notes'] as String?,
-      estimatedPrice: json['estimatedPrice'] as double?,
+      estimatedPrice: _toDouble(json['estimatedPrice']),
     );
   }
 
@@ -42,8 +57,8 @@ class ShoppingItem {
       'quantity': quantity,
       'assignedTo': assignedTo,
       'isCompleted': isCompleted,
-      'createdAt': createdAt.toIso8601String(),
-      'updatedAt': updatedAt.toIso8601String(),
+      'createdAt': createdAt,
+      'updatedAt': updatedAt,
       'notes': notes,
       'estimatedPrice': estimatedPrice,
     };

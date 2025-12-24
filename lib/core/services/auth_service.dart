@@ -34,18 +34,29 @@ class AuthService {
     required String name,
   }) async {
     try {
-      // Firebase chỉ hỗ trợ email authentication
-      if (!isEmail) {
-        print('Phone authentication not yet implemented');
-        return {'success': false, 'error': 'phone-not-supported'};
-      }
+      String emailToUse = contact;
+      String? phoneToSave;
 
-      print('Starting register with email: $contact');
+      if (!isEmail) {
+        // Support phone registration without OTP by aliasing to an internal email
+        var v = contact.trim();
+        if (!v.startsWith('+')) {
+          if (v.startsWith('0')) {
+            v = '+84${v.substring(1)}';
+          }
+        }
+        phoneToSave = v;
+        final normalizedDigits = v.replaceAll(RegExp(r"[^0-9+]"), "");
+        emailToUse = "$normalizedDigits@phone.local";
+        print('Registering phone as alias email: $emailToUse (phone: $phoneToSave)');
+      } else {
+        print('Starting register with email: $contact');
+      }
 
       // Tạo tài khoản Firebase với timeout 30 giây
       final userCredential = await _auth
           .createUserWithEmailAndPassword(
-            email: contact,
+            email: emailToUse,
             password: password,
           )
           .timeout(
@@ -61,10 +72,10 @@ class AuthService {
         final now = DateTime.now();
         final user = UserProfile(
           uid: userCredential.user!.uid,
-          email: contact,
+          email: emailToUse,
           name: name,
           avatar: null,
-          phone: null,
+          phone: phoneToSave,
           createdAt: now,
           updatedAt: now,
         );
@@ -106,6 +117,187 @@ class AuthService {
       print('Register error (unexpected): $e');
       print('Error type: ${e.runtimeType}');
       return {'success': false, 'error': 'unknown'};
+    }
+  }
+
+  /// Bắt đầu xác thực số điện thoại: gửi mã OTP
+  /// Returns: {success: true, verificationId: '...'} hoặc {success: false, error: '...'}
+  Future<Map<String, dynamic>> startPhoneVerification({
+    required String phone,
+  }) async {
+    try {
+      final completer = Completer<Map<String, dynamic>>();
+      await _auth.verifyPhoneNumber(
+        phoneNumber: phone,
+        timeout: const Duration(seconds: 60),
+        verificationCompleted: (PhoneAuthCredential credential) async {
+          try {
+            final cred = await _auth.signInWithCredential(credential);
+            if (cred.user != null) {
+              completer.complete({'success': true, 'autoSignedIn': true});
+            } else {
+              completer.complete({'success': false, 'error': 'auto-signin-failed'});
+            }
+          } catch (e) {
+            completer.complete({'success': false, 'error': 'auto-signin-exception'});
+          }
+        },
+        verificationFailed: (FirebaseAuthException e) {
+          completer.complete({'success': false, 'error': e.code});
+        },
+        codeSent: (String verificationId, int? resendToken) {
+          completer.complete({'success': true, 'verificationId': verificationId});
+        },
+        codeAutoRetrievalTimeout: (String verificationId) {
+          // User will enter code manually
+        },
+      );
+      return completer.future
+          .timeout(const Duration(seconds: 70), onTimeout: () => {'success': false, 'error': 'timeout'});
+    } catch (e) {
+      print('startPhoneVerification error: $e');
+      return {'success': false, 'error': 'unknown'};
+    }
+  }
+
+  /// Xác nhận OTP và tạo hồ sơ người dùng trong Firestore
+  Future<Map<String, dynamic>> confirmSmsCodeAndCreateProfile({
+    required String verificationId,
+    required String smsCode,
+    required String name,
+    required String phone,
+  }) async {
+    try {
+      final credential = PhoneAuthProvider.credential(
+        verificationId: verificationId,
+        smsCode: smsCode,
+      );
+      final userCred = await _auth.signInWithCredential(credential);
+      if (userCred.user == null) {
+        return {'success': false, 'error': 'user-not-created'};
+      }
+
+      final now = DateTime.now();
+      final uid = userCred.user!.uid;
+
+      await _firestore.collection('users').doc(uid).set({
+        'uid': uid,
+        'email': null,
+        'name': name,
+        'avatar': null,
+        'phone': phone,
+        'createdAt': Timestamp.fromDate(now),
+        'updatedAt': Timestamp.fromDate(now),
+      }, SetOptions(merge: true));
+
+      await userCred.user!.updateDisplayName(name);
+
+      _currentUser = UserProfile(
+        uid: uid,
+        email: null,
+        name: name,
+        avatar: null,
+        phone: phone,
+        createdAt: now,
+        updatedAt: now,
+      );
+      return {'success': true};
+    } on FirebaseAuthException catch (e) {
+      print('confirmSmsCode error: ${e.code}');
+      return {'success': false, 'error': e.code};
+    } catch (e) {
+      print('confirmSmsCode unexpected error: $e');
+      return {'success': false, 'error': 'unknown'};
+    }
+  }
+
+  /// Xác nhận OTP để đăng nhập (không tạo hồ sơ mới nếu chưa có)
+  Future<Map<String, dynamic>> confirmSmsCodeSignIn({
+    required String verificationId,
+    required String smsCode,
+  }) async {
+    try {
+      final credential = PhoneAuthProvider.credential(
+        verificationId: verificationId,
+        smsCode: smsCode,
+      );
+      final userCred = await _auth.signInWithCredential(credential);
+      if (userCred.user == null) {
+        return {'success': false, 'error': 'user-not-created'};
+      }
+
+      // Load profile if exists
+      try {
+        final doc = await _firestore.collection('users').doc(userCred.user!.uid).get();
+        if (doc.exists) {
+          final data = doc.data()!;
+          _currentUser = UserProfile(
+            uid: data['uid'],
+            email: data['email'],
+            name: data['name'],
+            avatar: data['avatar'],
+            phone: data['phone'],
+            createdAt: (data['createdAt'] as Timestamp).toDate(),
+            updatedAt: (data['updatedAt'] as Timestamp).toDate(),
+          );
+        } else {
+          // Minimal in-memory profile
+          final now = DateTime.now();
+          _currentUser = UserProfile(
+            uid: userCred.user!.uid,
+            email: userCred.user!.email,
+            name: userCred.user!.displayName ?? 'Người dùng',
+            avatar: null,
+            phone: null,
+            createdAt: now,
+            updatedAt: now,
+          );
+        }
+      } catch (_) {
+        // Ignore profile load errors, stay signed-in
+      }
+      return {'success': true};
+    } on FirebaseAuthException catch (e) {
+      print('confirmSmsCodeSignIn error: ${e.code}');
+      return {'success': false, 'error': e.code};
+    } catch (e) {
+      print('confirmSmsCodeSignIn unexpected error: $e');
+      return {'success': false, 'error': 'unknown'};
+    }
+  }
+
+  /// Tạo hồ sơ cho user đã đăng nhập sẵn (trường hợp auto verification)
+  Future<bool> createProfileForSignedInUser({
+    required String name,
+    required String phone,
+  }) async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null) return false;
+      final now = DateTime.now();
+      await _firestore.collection('users').doc(user.uid).set({
+        'uid': user.uid,
+        'email': null,
+        'name': name,
+        'avatar': null,
+        'phone': phone,
+        'createdAt': Timestamp.fromDate(now),
+        'updatedAt': Timestamp.fromDate(now),
+      }, SetOptions(merge: true));
+      await user.updateDisplayName(name);
+      _currentUser = UserProfile(
+        uid: user.uid,
+        email: null,
+        name: name,
+        avatar: null,
+        phone: phone,
+        createdAt: now,
+        updatedAt: now,
+      );
+      return true;
+    } catch (e) {
+      print('createProfileForSignedInUser error: $e');
+      return false;
     }
   }
 

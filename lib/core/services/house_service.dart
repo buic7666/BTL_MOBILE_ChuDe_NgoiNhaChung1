@@ -3,6 +3,7 @@
 import 'dart:async';
 import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../../features/bulletin/models/house_info.dart';
 
 class HouseService {
   static final HouseService _instance = HouseService._internal();
@@ -247,6 +248,43 @@ class HouseService {
       return houseDoc.data()?['code'];
     } catch (e) {
       print('Error getting house code: $e');
+      return null;
+    }
+  }
+
+  Future<String?> getHouseId(String userId) async {
+    try {
+      final userDoc = await _firestore.collection('users').doc(userId).get();
+      return userDoc.data()?['houseId'] as String?;
+    } catch (e) {
+      print('Error getHouseId: $e');
+      return null;
+    }
+  }
+
+  // Lấy thông tin nhà đầy đủ cho user
+  Future<HouseInfo?> getHouseInfoForUser(String userId) async {
+    try {
+      final userDoc = await _firestore.collection('users').doc(userId).get();
+      final houseId = userDoc.data()?['houseId'] as String?;
+      if (houseId == null) return null;
+
+      final houseDoc = await _firestore.collection('houses').doc(houseId).get();
+      final data = houseDoc.data();
+      if (data == null) return null;
+
+      return HouseInfo(
+        id: data['id'] as String? ?? houseId,
+        name: data['name'] as String? ?? '',
+        inviteCode: data['code'] as String? ?? '',
+        address: data['address'] as String? ?? '',
+        ownerId: data['ownerId'] as String? ?? '',
+        memberIds: List<String>.from(data['members'] ?? []),
+        createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+        updatedAt: (data['updatedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      );
+    } catch (e) {
+      print('Error getHouseInfoForUser: $e');
       return null;
     }
   }

@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
+import 'dart:async';
 import '../widgets/house_info_card.dart';
 import '../widgets/utility_grid.dart';
 import '../widgets/shopping_list_card.dart';
 import '../models/house_info.dart';
 import '../models/utility.dart';
 import '../models/shopping_item.dart';
+import '../../../core/services/house_service.dart';
+import '../../../core/services/auth_service.dart';
+import '../../../core/services/bulletin_service.dart';
 import 'rules_screen.dart';
 import 'wifi_info_screen.dart';
 import 'emergency_contact_screen.dart';
@@ -18,10 +22,15 @@ class HouseBulletinScreen extends StatefulWidget {
 }
 
 class _HouseBulletinScreenState extends State<HouseBulletinScreen> {
-  late HouseInfo houseInfo;
+  HouseInfo? houseInfo;
   late List<Utility> utilities;
-  late List<ShoppingItem> shoppingItems;
+  List<ShoppingItem> shoppingItems = [];
   late List<String> rules;
+  bool _isLoading = true;
+  String? _houseId;
+  Stream<List<ShoppingItem>>? _shoppingStream;
+  StreamSubscription<List<ShoppingItem>>? _shoppingSub;
+  StreamSubscription<List<Utility>>? _utilitiesSub;
 
   @override
   void initState() {
@@ -29,16 +38,57 @@ class _HouseBulletinScreenState extends State<HouseBulletinScreen> {
     _initializeData();
   }
 
-  void _initializeData() {
-    houseInfo = HouseInfo(
+  Future<void> _initializeData() async {
+    final auth = AuthService();
+    final houseService = HouseService();
+
+    final uid = auth.currentFirebaseUser?.uid;
+    HouseInfo? fetchedHouse;
+    String? houseId;
+    if (uid != null) {
+      fetchedHouse = await houseService.getHouseInfoForUser(uid);
+      houseId = await houseService.getHouseId(uid);
+    }
+
+    // Fallback mock nếu chưa có dữ liệu nhà
+    fetchedHouse ??= HouseInfo(
       id: 'house1',
       name: 'Phòng 401 - Happy House',
       inviteCode: '882910',
       address: 'Địa chỉ mẫu',
-      memberCount: 4,
+      ownerId: 'owner1',
+      memberIds: const ['owner1', 'member2', 'member3', 'member4'],
       createdAt: DateTime.now(),
       updatedAt: DateTime.now(),
     );
+
+    houseInfo = fetchedHouse;
+    _houseId = houseId ?? fetchedHouse.id;
+
+    if (_houseId != null) {
+      _shoppingStream = BulletinService().shoppingItemsStream(_houseId!);
+      _shoppingSub?.cancel();
+      _shoppingSub = _shoppingStream!.listen((items) {
+        if (!mounted) return;
+        setState(() {
+          shoppingItems = items;
+        });
+      });
+      // Subscribe to utilities; merge into defaults by id when present
+      _utilitiesSub?.cancel();
+      _utilitiesSub = BulletinService().utilitiesStream(_houseId!).listen((items) {
+        if (!mounted) return;
+        setState(() {
+          if (items.isEmpty) {
+            // Keep defaults
+            return;
+          }
+          // Map incoming items into current utilities list by id
+          final byId = {for (final u in items) u.id: u};
+          utilities = utilities.map((u) => byId[u.id] ?? u).toList();
+        });
+      });
+    }
 
     utilities = [
       Utility.wifi(price: 'Pass: 123456789'),
@@ -85,24 +135,35 @@ class _HouseBulletinScreenState extends State<HouseBulletinScreen> {
       'Dọn dẹp đồ vật cá nhân trong không gian chung',
       'Tham gia dọn dẹp chung ít nhất 1 lần/tuần',
     ];
+
+    if (!mounted) return;
+    setState(() {
+      _isLoading = false;
+    });
+  }
+
+  @override
+  void dispose() {
+    _shoppingSub?.cancel();
+    _utilitiesSub?.cancel();
+    super.dispose();
   }
 
   void _addShoppingItem(ShoppingItem item) {
-    setState(() {
-      shoppingItems.add(item);
-    });
+    if (_houseId == null) return;
+    BulletinService().addShoppingItem(_houseId!, item);
   }
 
   void _toggleShoppingItem(int index) {
-    setState(() {
-      shoppingItems[index] = shoppingItems[index].toggleCompleted();
-    });
+    if (_houseId == null) return;
+    final item = shoppingItems[index];
+    BulletinService().toggleShoppingItem(_houseId!, item);
   }
 
   void _deleteShoppingItem(int index) {
-    setState(() {
-      shoppingItems.removeAt(index);
-    });
+    if (_houseId == null) return;
+    final item = shoppingItems[index];
+    BulletinService().deleteShoppingItem(_houseId!, item.id);
   }
 
   void _showRulesScreen() {
@@ -135,6 +196,12 @@ class _HouseBulletinScreenState extends State<HouseBulletinScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: const Text(
@@ -151,7 +218,7 @@ class _HouseBulletinScreenState extends State<HouseBulletinScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              HouseInfoCard(houseInfo: houseInfo),
+              if (houseInfo != null) HouseInfoCard(houseInfo: houseInfo!),
               const SizedBox(height: 16),
               UtilityGrid(
                 utilities: utilities,
@@ -173,6 +240,7 @@ class _HouseBulletinScreenState extends State<HouseBulletinScreen> {
                 onAddItem: _addShoppingItem,
                 onToggleItem: _toggleShoppingItem,
                 onDeleteItem: _deleteShoppingItem,
+                houseId: _houseId,
               ),
             ],
           ),
