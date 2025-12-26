@@ -38,10 +38,6 @@ class PaymentScreen extends StatelessWidget {
                   end: Alignment.bottomRight,
                   colors: [Color(0xFF7C5CFF), Color(0xFF6B4FE8)],
                 ),
-                // borderRadius: BorderRadius.only(
-                //   bottomLeft: Radius.circular(24),
-                //   bottomRight: Radius.circular(24),
-                // ),
               ),
               padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
               child: Stack(

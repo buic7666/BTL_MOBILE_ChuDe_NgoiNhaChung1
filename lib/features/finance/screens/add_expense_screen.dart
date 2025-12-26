@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
-enum SplitMode { equal, percent, perPerson }
+import '../models/split_mode.dart';
 
 class AddExpenseScreen extends StatefulWidget {
   const AddExpenseScreen({super.key});
@@ -161,10 +161,6 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
           end: Alignment.bottomRight,
           colors: [Color(0xFF8E54E9), Color(0xFF5A31D8)],
         ),
-        // borderRadius: BorderRadius.only(
-        //   bottomLeft: Radius.circular(20),
-        //   bottomRight: Radius.circular(20),
-        // ),
       ),
       child: Row(
         children: [

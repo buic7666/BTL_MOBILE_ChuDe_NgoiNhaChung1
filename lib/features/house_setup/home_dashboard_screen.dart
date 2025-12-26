@@ -3,7 +3,7 @@ import 'package:intl/intl.dart';
 import '../../constants/app_colors.dart';
 import '../chores/screens/dashboard_screen.dart';
 import '../bulletin/screens/house_bulletin_screen.dart';
-import '../finance/finance_main_screen.dart';
+import '../finance/screens/finance_main_screen.dart';
 import '../../core/services/auth_service.dart';
 import '../../core/services/house_service.dart';
 import 'home_screen.dart';
@@ -60,7 +60,9 @@ class _DynamicHomeScreenState extends State<DynamicHomeScreen> {
       _houseName = houseName;
       _houseCode = houseCode;
       _hasChoreToday = hasHouse ? _hasChoreToday : false;
-      _currentChore = _hasChoreToday ? _currentChore : 'Không có việc nhà hôm nay';
+      _currentChore = _hasChoreToday
+          ? _currentChore
+          : 'Không có việc nhà hôm nay';
       _myDebt = _myDebt;
       _othersOweMe = _othersOweMe;
       _shoppingItemCount = _shoppingItemCount;
@@ -93,10 +95,7 @@ class _DynamicHomeScreenState extends State<DynamicHomeScreen> {
               }
             },
             itemBuilder: (ctx) => const [
-              PopupMenuItem(
-                value: 'logout',
-                child: Text('Đăng xuất'),
-              ),
+              PopupMenuItem(value: 'logout', child: Text('Đăng xuất')),
             ],
           ),
         ],
@@ -142,9 +141,7 @@ class _DynamicHomeScreenState extends State<DynamicHomeScreen> {
     );
   }
 
-  Widget _buildBody(
-    int index,
-  ) {
+  Widget _buildBody(int index) {
     switch (index) {
       case 0:
         return _buildHomeTab();
@@ -178,7 +175,9 @@ class _DynamicHomeScreenState extends State<DynamicHomeScreen> {
               ),
             ),
             const SizedBox(height: 12),
-            _hasChoreToday ? _buildActiveChoreCard(_currentChore) : _buildFreeStateCard(),
+            _hasChoreToday
+                ? _buildActiveChoreCard(_currentChore)
+                : _buildFreeStateCard(),
             const SizedBox(height: 24),
             const Text(
               "Ví của tôi",
@@ -250,18 +249,12 @@ class _DynamicHomeScreenState extends State<DynamicHomeScreen> {
             const SizedBox(height: 4),
             Text(
               houseName,
-              style: const TextStyle(
-                fontSize: 14,
-                color: Colors.grey,
-              ),
+              style: const TextStyle(fontSize: 14, color: Colors.grey),
             ),
             if (houseCode.isNotEmpty)
               Text(
                 'Mã nhà: $houseCode',
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey,
-                ),
+                style: const TextStyle(fontSize: 12, color: Colors.grey),
               ),
           ],
         ),
@@ -503,5 +496,4 @@ class _DynamicHomeScreenState extends State<DynamicHomeScreen> {
       ),
     );
   }
-
 }
