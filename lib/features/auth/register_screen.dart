@@ -146,7 +146,10 @@ class _RegisterScreenState extends State<RegisterScreen>
     }
   }
 
-  Future<void> _handleRegisterError(String? errorCode, String contactInfo) async {
+  Future<void> _handleRegisterError(
+    String? errorCode,
+    String contactInfo,
+  ) async {
     final code = errorCode ?? 'unknown';
     String errorMsg = '❌ Đăng ký thất bại! [$code]';
     if (code == 'weak-password') {
@@ -156,7 +159,8 @@ class _RegisterScreenState extends State<RegisterScreen>
     } else if (code == 'operation-not-allowed') {
       errorMsg = '❌ Chức năng đăng ký chưa được kích hoạt!';
     } else if (code == 'configuration-not-found') {
-      errorMsg = '❌ Firebase chưa được cấu hình đúng!\nVui lòng bật Email/Password trong Firebase Console.';
+      errorMsg =
+          '❌ Firebase chưa được cấu hình đúng!\nVui lòng bật Email/Password trong Firebase Console.';
     } else if (code == 'timeout') {
       errorMsg = '❌ Timeout! Kết nối Firebase quá chậm.';
     } else if (code == 'email-already-in-use') {
@@ -179,6 +183,7 @@ class _RegisterScreenState extends State<RegisterScreen>
     );
   }
 
+  // ignore: unused_element
   String _normalizePhone(String input) {
     var v = input.trim();
     if (v.startsWith('+')) return v;
@@ -188,6 +193,7 @@ class _RegisterScreenState extends State<RegisterScreen>
     return v;
   }
 
+  // ignore: unused_element
   Future<String?> _promptOtpCode() async {
     final controller = TextEditingController();
     final res = await showDialog<String?>(
@@ -201,8 +207,14 @@ class _RegisterScreenState extends State<RegisterScreen>
             decoration: const InputDecoration(hintText: '6 số OTP'),
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx, null), child: const Text('Hủy')),
-            TextButton(onPressed: () => Navigator.pop(ctx, controller.text.trim()), child: const Text('Xác nhận')),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, null),
+              child: const Text('Hủy'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, controller.text.trim()),
+              child: const Text('Xác nhận'),
+            ),
           ],
         );
       },
@@ -248,9 +260,7 @@ class _RegisterScreenState extends State<RegisterScreen>
                 // Điều hướng sang màn hình đăng nhập
                 Navigator.push(
                   context,
-                  MaterialPageRoute(
-                    builder: (_) => const LoginScreen(),
-                  ),
+                  MaterialPageRoute(builder: (_) => const LoginScreen()),
                 );
               },
               child: const Text('Đăng nhập'),
@@ -462,8 +472,10 @@ class _RegisterScreenState extends State<RegisterScreen>
                             obscureText: true,
                             textInputAction: TextInputAction.next,
                             validator: (value) {
-                              if (value == null || value.isEmpty) return 'Vui lòng nhập mật khẩu';
-                              if (!AppUtils.isValidPassword(value)) return 'Mật khẩu phải có ít nhất 6 ký tự';
+                              if (value == null || value.isEmpty)
+                                return 'Vui lòng nhập mật khẩu';
+                              if (!AppUtils.isValidPassword(value))
+                                return 'Mật khẩu phải có ít nhất 6 ký tự';
                               return null;
                             },
                             decoration: const InputDecoration(
@@ -489,8 +501,10 @@ class _RegisterScreenState extends State<RegisterScreen>
                             obscureText: true,
                             textInputAction: TextInputAction.done,
                             validator: (value) {
-                              if (value == null || value.isEmpty) return 'Vui lòng xác nhận mật khẩu';
-                              if (value != _passwordController.text) return 'Mật khẩu không trùng khớp';
+                              if (value == null || value.isEmpty)
+                                return 'Vui lòng xác nhận mật khẩu';
+                              if (value != _passwordController.text)
+                                return 'Mật khẩu không trùng khớp';
                               return null;
                             },
                             decoration: const InputDecoration(

@@ -38,11 +38,17 @@ Map<String, double> computeNetBalances(
                 .map((x) => x.toString().toLowerCase())
                 .where((x) => members.contains(x))
                 .toList()
-          : members;
-      final sc = selected.isNotEmpty ? selected.length : 1;
+          : <String>[];
+      // Ensure payer is counted as a participant; user expectation often includes payer in split.
+      final participants = <String>{...selected};
+      if (payer.isNotEmpty) {
+        participants.add(payer);
+      }
+      final use = participants.isNotEmpty ? participants.toList() : members;
+      final sc = use.isNotEmpty ? use.length : 1;
       final perShare = amount / sc;
       for (final m in members) {
-        shares[m] = selected.contains(m) ? perShare : 0.0;
+        shares[m] = use.contains(m) ? perShare : 0.0;
       }
     } else {
       final per = amount / members.length;

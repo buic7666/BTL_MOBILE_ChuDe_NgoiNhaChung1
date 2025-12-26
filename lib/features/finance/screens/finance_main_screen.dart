@@ -9,6 +9,9 @@ import '../widgets/finance_header.dart';
 import '../widgets/transaction_item.dart';
 import 'add_expense_screen.dart';
 import 'payment_screen.dart';
+import '../../../core/services/finance_service.dart';
+import '../../../core/services/auth_service.dart';
+import '../../../core/services/house_service.dart';
 
 class FinanceMainScreen extends StatefulWidget {
   const FinanceMainScreen({super.key});
@@ -20,24 +23,85 @@ class FinanceMainScreen extends StatefulWidget {
 class _FinanceMainScreenState extends State<FinanceMainScreen> {
   int _selectedToggle = 0; // 0 = Ai nợ ai, 1 = Chi tiêu
 
-  final List<Map<String, dynamic>> _expenses = [
-    {
-      'title': 'Tiền điện chung',
-      'subtitle': 'An đã trả - Chia đều',
-      'date': DateTime.now(),
-      'amount': 125000.0,
-      'payer': 'An',
-    },
-  ];
+  final List<Map<String, dynamic>> _expenses = [];
 
   // Track settlements per member (positive/negative deltas applied to net balances)
   final Map<String, double> _settlements = {};
 
+  late final FinanceService _financeService;
+  String? _houseId;
+  Map<String, double>? _materializedNet;
+
+  @override
+  void initState() {
+    super.initState();
+    // Resolve current houseId for the authenticated user
+    final auth = AuthService();
+    final houseSvc = HouseService();
+    final uid = auth.currentFirebaseUser?.uid;
+    if (uid != null) {
+      houseSvc.getHouseId(uid).then((hid) {
+        if (!mounted) return;
+        setState(() {
+          _houseId = hid;
+          _financeService = FinanceService(houseId: _houseId);
+        });
+
+        // Listen to expenses from Firestore (scoped by house)
+        _financeService.expensesStream().listen((items) {
+          if (!mounted) return;
+          setState(() {
+            _expenses
+              ..clear()
+              ..addAll(items);
+          });
+        });
+
+        // Listen to settlements from Firestore (scoped by house)
+        _financeService.settlementsStream().listen((m) {
+          if (!mounted) return;
+          setState(() {
+            _settlements
+              ..clear()
+              ..addAll(m);
+          });
+        });
+
+        // Listen to materialized balances from Cloud Functions
+        _financeService.balancesStream().listen((net) {
+          if (!mounted) return;
+          setState(() {
+            _materializedNet = net;
+          });
+        });
+      });
+    } else {
+      // Fallback when no user: use unscoped service
+      _financeService = FinanceService();
+      _financeService.expensesStream().listen((items) {
+        if (!mounted) return;
+        setState(() {
+          _expenses
+            ..clear()
+            ..addAll(items);
+        });
+      });
+      _financeService.settlementsStream().listen((m) {
+        if (!mounted) return;
+        setState(() {
+          _settlements
+            ..clear()
+            ..addAll(m);
+        });
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final formatter = NumberFormat.currency(locale: 'vi_VN', symbol: 'đ');
-
-    final net = _computeNetBalances();
+    // Prefer materialized balances from Cloud Functions when available
+    final net = _materializedNet ?? _computeNetBalances();
     final totalOweYou = net.entries
         .where((e) => e.key != 'you' && e.value > 0.5)
         .fold(0.0, (p, e) => p + e.value);
@@ -79,11 +143,14 @@ class _FinanceMainScreenState extends State<FinanceMainScreen> {
 
             result['subtitle'] = '$payerName đã trả - $splitDesc';
 
-            setState(() {
-              _expenses.insert(0, result);
-            });
+            // Persist to Firestore; UI will update via stream
+            await _financeService.addExpense(result);
 
-            final newNet = _computeNetBalances();
+            // Compute message diff optimistically using current list + new result
+            final newNet = computeNetBalances([
+              ..._expenses,
+              result,
+            ], _settlements);
             final messages = <String>[];
             final nf = NumberFormat.currency(locale: 'vi_VN', symbol: 'đ');
 
@@ -94,19 +161,19 @@ class _FinanceMainScreenState extends State<FinanceMainScreen> {
 
               if (prev > 0 && now > 0 && diff > 0.49) {
                 messages.add(
-                  '${_displayName(id)} nợ bạn thêm ${nf.format(diff)}',
+                  '${_displayName(id)} nợ bạn thêm ${nf.format(diff / 2)}',
                 );
               } else if (prev < 0 && now < 0 && diff < -0.49) {
                 messages.add(
-                  'Bạn nợ ${_displayName(id)} thêm ${nf.format(diff.abs())}',
+                  'Bạn nợ ${_displayName(id)} thêm ${nf.format(diff.abs() / 2)}',
                 );
               } else if (prev <= 0 && now > 0) {
                 messages.add(
-                  '${_displayName(id)} giờ nợ bạn ${nf.format(now.abs())}',
+                  '${_displayName(id)} giờ nợ bạn ${nf.format(now.abs() / 2)}',
                 );
               } else if (prev >= 0 && now < 0) {
                 messages.add(
-                  'Bạn giờ nợ ${_displayName(id)} ${nf.format(now.abs())}',
+                  'Bạn giờ nợ ${_displayName(id)} ${nf.format(now.abs() / 2)}',
                 );
               }
             }
@@ -274,6 +341,26 @@ class _FinanceMainScreenState extends State<FinanceMainScreen> {
         final delta = action == 'received' ? -amountValue : amountValue;
         _settlements[memberId] = (_settlements[memberId] ?? 0.0) + delta;
       });
+
+      // Persist settlement to Firestore
+      try {
+        await _financeService.addSettlement(
+          memberId: memberId,
+          delta:
+              ((result['action']?.toString() ??
+                      (isPositive ? 'received' : 'paid')) ==
+                  'received'
+              ? -amountValue
+              : amountValue),
+        );
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Lỗi ghi nhận thanh toán: $e'),
+            backgroundColor: const Color(0xFFEF4444),
+          ),
+        );
+      }
 
       final nf = NumberFormat.currency(locale: 'vi_VN', symbol: 'đ');
       final verb =
