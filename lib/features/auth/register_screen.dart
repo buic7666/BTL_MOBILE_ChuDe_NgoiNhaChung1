@@ -178,38 +178,6 @@ class _RegisterScreenState extends State<RegisterScreen>
       ),
     );
   }
-
-  String _normalizePhone(String input) {
-    var v = input.trim();
-    if (v.startsWith('+')) return v;
-    // ví dụ VN: +84 thay cho 0 đầu
-    if (v.startsWith('0')) return '+84${v.substring(1)}';
-    // fallback: yêu cầu có mã quốc gia
-    return v;
-  }
-
-  Future<String?> _promptOtpCode() async {
-    final controller = TextEditingController();
-    final res = await showDialog<String?>(
-      context: context,
-      builder: (ctx) {
-        return AlertDialog(
-          title: const Text('Nhập mã OTP'),
-          content: TextField(
-            controller: controller,
-            keyboardType: TextInputType.number,
-            decoration: const InputDecoration(hintText: '6 số OTP'),
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx, null), child: const Text('Hủy')),
-            TextButton(onPressed: () => Navigator.pop(ctx, controller.text.trim()), child: const Text('Xác nhận')),
-          ],
-        );
-      },
-    );
-    return res == null || res.isEmpty ? null : res;
-  }
-
   Future<void> _showEmailInUseDialog(String email) async {
     await showDialog<void>(
       context: context,
