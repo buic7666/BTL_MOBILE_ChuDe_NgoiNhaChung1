@@ -110,7 +110,7 @@ class ShoppingListCard extends StatelessWidget {
                 );
               },
               icon: const Icon(Icons.add),
-              label: const Text('Thêm mục mới'),
+              label: Text(houseId == null ? 'Cần có houseId' : 'Thêm mục mới'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.orange,
                 foregroundColor: Colors.white,

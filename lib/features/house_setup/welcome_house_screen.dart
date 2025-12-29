@@ -4,8 +4,19 @@ import '../../core/services/auth_service.dart';
 import 'create_house_screen.dart';
 import 'enter_house_code_screen.dart';
 
-class WelcomeHouseScreen extends StatelessWidget {
+class WelcomeHouseScreen extends StatefulWidget {
   const WelcomeHouseScreen({Key? key}) : super(key: key);
+
+  @override
+  State<WelcomeHouseScreen> createState() => _WelcomeHouseScreenState();
+}
+
+class _WelcomeHouseScreenState extends State<WelcomeHouseScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // Không tự động vào nhà; để người dùng tự chọn tạo/nhập mã
+  }
 
   Future<bool> _onWillPop(BuildContext context) async {
     // Hiển thị dialog xác nhận đăng xuất

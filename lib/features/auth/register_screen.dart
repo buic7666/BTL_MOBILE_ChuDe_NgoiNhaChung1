@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../constants/app_colors.dart';
 import '../../core/services/auth_service.dart';
 import '../../core/utils/app_utils.dart';
+import 'login_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({Key? key}) : super(key: key);
@@ -19,6 +20,7 @@ class _RegisterScreenState extends State<RegisterScreen>
   final _confirmPasswordController = TextEditingController();
   final _authService = AuthService();
   bool _isLoading = false;
+  bool _isEmailMode = true;
   late final AnimationController _animController;
   late final AnimationController _logoController;
   late final Animation<Offset> _headerOffset;
@@ -77,6 +79,17 @@ class _RegisterScreenState extends State<RegisterScreen>
 
     // start entrance animation
     _animController.forward();
+
+    // detect email vs phone mode from contact field
+    _contactController.addListener(() {
+      final v = _contactController.text.trim();
+      final nowEmail = v.contains('@');
+      if (nowEmail != _isEmailMode) {
+        setState(() {
+          _isEmailMode = nowEmail;
+        });
+      }
+    });
   }
 
   Future<void> _handleRegister() async {
@@ -86,37 +99,134 @@ class _RegisterScreenState extends State<RegisterScreen>
     try {
       final contactInfo = _contactController.text.trim();
       final isEmail = contactInfo.contains('@');
-
-      final result = await _authService.register(
-        contact: contactInfo,
-        isEmail: isEmail,
-        password: _passwordController.text,
-        name: _nameController.text.trim(),
-      );
-
-      if (result) {
+      if (isEmail) {
+        final result = await _authService.register(
+          contact: contactInfo,
+          isEmail: true,
+          password: _passwordController.text,
+          name: _nameController.text.trim(),
+        );
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('✓ Đăng ký thành công!'),
-              backgroundColor: Color.fromARGB(255, 21, 6, 234),
-            ),
-          );
-          Navigator.pop(context);
+          if (result['success'] == true) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('✓ Đăng ký thành công!'),
+                backgroundColor: Color.fromARGB(255, 21, 6, 234),
+              ),
+            );
+            Navigator.pop(context);
+          } else {
+            await _handleRegisterError(result['error'], contactInfo);
+          }
         }
       } else {
+        // Phone registration without OTP: require password and name
+        final result = await _authService.register(
+          contact: contactInfo,
+          isEmail: false,
+          password: _passwordController.text,
+          name: _nameController.text.trim(),
+        );
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('❌ Đăng ký thất bại! Tài khoản đã tồn tại.'),
-              backgroundColor: Color.fromARGB(255, 229, 57, 53),
-            ),
-          );
+          if (result['success'] == true) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('✓ Đăng ký bằng SĐT thành công!'),
+                backgroundColor: Color.fromARGB(255, 21, 6, 234),
+              ),
+            );
+            Navigator.pop(context);
+          } else {
+            await _handleRegisterError(result['error'], contactInfo);
+          }
         }
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  Future<void> _handleRegisterError(String? errorCode, String contactInfo) async {
+    final code = errorCode ?? 'unknown';
+    String errorMsg = '❌ Đăng ký thất bại! [$code]';
+    if (code == 'weak-password') {
+      errorMsg = '❌ Mật khẩu quá yếu (tối thiểu 6 ký tự)!';
+    } else if (code == 'invalid-email') {
+      errorMsg = '❌ Email không hợp lệ!';
+    } else if (code == 'operation-not-allowed') {
+      errorMsg = '❌ Chức năng đăng ký chưa được kích hoạt!';
+    } else if (code == 'configuration-not-found') {
+      errorMsg = '❌ Firebase chưa được cấu hình đúng!\nVui lòng bật Email/Password trong Firebase Console.';
+    } else if (code == 'timeout') {
+      errorMsg = '❌ Timeout! Kết nối Firebase quá chậm.';
+    } else if (code == 'email-already-in-use') {
+      await _showEmailInUseDialog(contactInfo);
+      return;
+    } else if (code == 'invalid-phone-number') {
+      errorMsg = '❌ Số điện thoại không hợp lệ!';
+    } else if (code == 'session-expired') {
+      errorMsg = '❌ Mã OTP hết hạn, vui lòng thử lại!';
+    } else if (code == 'quota-exceeded') {
+      errorMsg = '❌ Vượt quá hạn mức SMS OTP!';
+    }
+    print('REGISTER ERROR: $code - Message: $errorMsg');
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(errorMsg),
+        backgroundColor: const Color.fromARGB(255, 229, 57, 53),
+        duration: const Duration(seconds: 5),
+      ),
+    );
+  }
+  Future<void> _showEmailInUseDialog(String email) async {
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          title: const Text('Email đã tồn tại'),
+          content: Text(
+            'Email $email đã được đăng ký. Bạn muốn đăng nhập hoặc gửi email đặt lại mật khẩu?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () async {
+                // Gửi email đặt lại mật khẩu
+                final ok = await _authService.resetPassword(email: email);
+                if (mounted) {
+                  Navigator.of(ctx).pop();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        ok
+                            ? 'Đã gửi email đặt lại mật khẩu tới $email'
+                            : 'Gửi email đặt lại mật khẩu thất bại',
+                      ),
+                      backgroundColor: ok
+                          ? const Color.fromARGB(255, 21, 208, 97)
+                          : const Color.fromARGB(255, 229, 57, 53),
+                    ),
+                  );
+                }
+              },
+              child: const Text('Gửi reset mật khẩu'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.of(ctx).pop();
+                // Điều hướng sang màn hình đăng nhập
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const LoginScreen(),
+                  ),
+                );
+              },
+              child: const Text('Đăng nhập'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   Widget _buildSocialButton({
@@ -266,7 +376,7 @@ class _RegisterScreenState extends State<RegisterScreen>
                         // Contact field - email or phone (accepts both)
                         TextFormField(
                           controller: _contactController,
-                          keyboardType: TextInputType.text,
+                          keyboardType: TextInputType.phone,
                           textInputAction: TextInputAction.next,
                           validator: (value) {
                             if (value == null || value.isEmpty) {
@@ -276,6 +386,9 @@ class _RegisterScreenState extends State<RegisterScreen>
                             final isEmail = value.contains('@');
                             if (isEmail && !AppUtils.isValidEmail(value)) {
                               return 'Email không hợp lệ';
+                            }
+                            if (!isEmail && value.length < 9) {
+                              return 'Số điện thoại quá ngắn';
                             }
                             return null;
                           },
@@ -306,7 +419,7 @@ class _RegisterScreenState extends State<RegisterScreen>
                         ),
                         const SizedBox(height: 12),
 
-                        // Password - gray background, no border
+                        // Password - yêu cầu cho cả email và số điện thoại
                         Container(
                           decoration: BoxDecoration(
                             color: AppColors.bgGrey,
@@ -317,10 +430,8 @@ class _RegisterScreenState extends State<RegisterScreen>
                             obscureText: true,
                             textInputAction: TextInputAction.next,
                             validator: (value) {
-                              if (value == null || value.isEmpty)
-                                return 'Vui lòng nhập mật khẩu';
-                              if (!AppUtils.isValidPassword(value))
-                                return 'Mật khẩu phải có ít nhất 6 ký tự';
+                              if (value == null || value.isEmpty) return 'Vui lòng nhập mật khẩu';
+                              if (!AppUtils.isValidPassword(value)) return 'Mật khẩu phải có ít nhất 6 ký tự';
                               return null;
                             },
                             decoration: const InputDecoration(
@@ -335,7 +446,7 @@ class _RegisterScreenState extends State<RegisterScreen>
                         ),
                         const SizedBox(height: 10),
 
-                        // Confirm password - gray background, no border
+                        // Confirm password - yêu cầu cho cả email và số điện thoại
                         Container(
                           decoration: BoxDecoration(
                             color: AppColors.bgGrey,
@@ -346,10 +457,8 @@ class _RegisterScreenState extends State<RegisterScreen>
                             obscureText: true,
                             textInputAction: TextInputAction.done,
                             validator: (value) {
-                              if (value == null || value.isEmpty)
-                                return 'Vui lòng xác nhận mật khẩu';
-                              if (value != _passwordController.text)
-                                return 'Mật khẩu không trùng khớp';
+                              if (value == null || value.isEmpty) return 'Vui lòng xác nhận mật khẩu';
+                              if (value != _passwordController.text) return 'Mật khẩu không trùng khớp';
                               return null;
                             },
                             decoration: const InputDecoration(

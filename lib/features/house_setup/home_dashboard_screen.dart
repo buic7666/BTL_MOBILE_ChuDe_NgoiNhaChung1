@@ -1,9 +1,15 @@
 import 'package:flutter/material.dart';
+import 'dart:async';
 import 'package:intl/intl.dart';
 import '../../constants/app_colors.dart';
 import '../chores/screens/dashboard_screen.dart';
 import '../bulletin/screens/house_bulletin_screen.dart';
+import '../bulletin/screens/shopping_list_screen.dart';
 import '../finance/finance_main_screen.dart';
+import '../../core/services/auth_service.dart';
+import '../../core/services/house_service.dart';
+import '../../core/services/bulletin_service.dart';
+import 'home_screen.dart';
 
 class DynamicHomeScreen extends StatefulWidget {
   const DynamicHomeScreen({super.key});
@@ -15,27 +21,116 @@ class DynamicHomeScreen extends StatefulWidget {
 class _DynamicHomeScreenState extends State<DynamicHomeScreen> {
   int _selectedIndex = 0;
 
+  bool _isLoading = true;
+  String _userName = '';
+  String _houseName = '';
+  String _houseCode = '';
+  String? _houseId;
+  bool _hasChoreToday = false;
+  String _currentChore = '';
+  double _myDebt = 0;
+  double _othersOweMe = 0;
+  int _shoppingItemCount = 0; // số món chưa hoàn thành
+
+  StreamSubscription? _shoppingStreamSub;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadDashboardData();
+  }
+
+  Future<void> _loadDashboardData() async {
+    final auth = AuthService();
+    final houseService = HouseService();
+
+    final userProfile = await auth.getCurrentUser();
+    final userName = userProfile?.name ?? userProfile?.email ?? 'Người dùng';
+    final uid = auth.currentFirebaseUser?.uid;
+
+    bool hasHouse = false;
+    String houseName = 'Nhà của bạn';
+    String houseCode = '';
+    String? houseId;
+
+    if (uid != null) {
+      hasHouse = await houseService.hasHouse(uid);
+      if (hasHouse) {
+        houseName = await houseService.getHouseName(uid);
+        houseCode = await houseService.getHouseCode(uid) ?? '';
+        houseId = await houseService.getHouseId(uid);
+      }
+    }
+
+    if (!mounted) return;
+    setState(() {
+      _userName = userName;
+      _houseName = houseName;
+      _houseCode = houseCode;
+      _houseId = houseId;
+      _hasChoreToday = hasHouse ? _hasChoreToday : false;
+      _currentChore = _hasChoreToday ? _currentChore : 'Không có việc nhà hôm nay';
+      _myDebt = _myDebt;
+      _othersOweMe = _othersOweMe;
+      _shoppingItemCount = _shoppingItemCount;
+      _isLoading = false;
+    });
+
+    // Đăng ký stream để đếm số món cần mua (chưa hoàn thành)
+    _subscribeShoppingCount();
+  }
+
+  void _subscribeShoppingCount() {
+    _shoppingStreamSub?.cancel();
+    final hid = _houseId;
+    if (hid == null) return;
+    _shoppingStreamSub = BulletinService()
+        .shoppingItemsStream(hid)
+        .listen((items) {
+      if (!mounted) return;
+      final notDone = items.where((e) => !e.isCompleted).length;
+      setState(() {
+        _shoppingItemCount = notDone;
+      });
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
-    // --- GIẢ LẬP DỮ LIỆU ĐỘNG ---
-    final String userName = "Khánh";
-    final bool hasChoreToday = true;
-    final String currentChore = "Đổ rác & Lau bếp";
-    final double myDebt = -50000;
-    final double othersOweMe = 120000;
-    final int shoppingItemCount = 3;
-
     return Scaffold(
       backgroundColor: AppColors.bgLight,
-      body: _buildBody(
-        _selectedIndex,
-        userName,
-        hasChoreToday,
-        currentChore,
-        myDebt,
-        othersOweMe,
-        shoppingItemCount,
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        title: const Text(
+          'Trang chủ',
+          style: TextStyle(color: AppColors.textPrimary),
+        ),
+        actions: [
+          PopupMenuButton<String>(
+            onSelected: (value) async {
+              if (value == 'logout') {
+                // Đăng xuất và quay về màn hình Home (đăng nhập/đăng ký)
+                await AuthService().logout();
+                if (!context.mounted) return;
+                Navigator.of(context).pushAndRemoveUntil(
+                  MaterialPageRoute(builder: (_) => const HomeScreen()),
+                  (route) => false,
+                );
+              }
+            },
+            itemBuilder: (ctx) => const [
+              PopupMenuItem(
+                value: 'logout',
+                child: Text('Đăng xuất'),
+              ),
+            ],
+          ),
+        ],
       ),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : _buildBody(_selectedIndex),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
         onTap: (index) {
@@ -76,16 +171,10 @@ class _DynamicHomeScreenState extends State<DynamicHomeScreen> {
 
   Widget _buildBody(
     int index,
-    String userName,
-    bool hasChoreToday,
-    String currentChore,
-    double myDebt,
-    double othersOweMe,
-    int shoppingItemCount,
   ) {
     switch (index) {
       case 0:
-        return _buildHomeTab(userName, hasChoreToday, currentChore, myDebt, othersOweMe, shoppingItemCount);
+        return _buildHomeTab();
       case 1:
         return const DashboardScreen();
       case 2:
@@ -93,19 +182,12 @@ class _DynamicHomeScreenState extends State<DynamicHomeScreen> {
       case 3:
         return const HouseBulletinScreen();
       default:
-        return _buildHomeTab(userName, hasChoreToday, currentChore, myDebt, othersOweMe, shoppingItemCount);
+        return _buildHomeTab();
     }
   }
 
   // ================= TAB HOME =================
-  Widget _buildHomeTab(
-    String userName,
-    bool hasChoreToday,
-    String currentChore,
-    double myDebt,
-    double othersOweMe,
-    int shoppingItemCount,
-  ) {
+  Widget _buildHomeTab() {
     return SafeArea(
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
@@ -113,6 +195,7 @@ class _DynamicHomeScreenState extends State<DynamicHomeScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildHeader(userName, '', ''),
+            _buildHeader(_userName, _houseName, _houseCode),
             const SizedBox(height: 24),
             const Text(
               "Việc nhà hôm nay",
@@ -123,7 +206,7 @@ class _DynamicHomeScreenState extends State<DynamicHomeScreen> {
               ),
             ),
             const SizedBox(height: 12),
-            hasChoreToday ? _buildActiveChoreCard(currentChore) : _buildFreeStateCard(),
+            _hasChoreToday ? _buildActiveChoreCard(_currentChore) : _buildFreeStateCard(),
             const SizedBox(height: 24),
             const Text(
               "Ví của tôi",
@@ -139,7 +222,7 @@ class _DynamicHomeScreenState extends State<DynamicHomeScreen> {
                 Expanded(
                   child: _buildFinanceCard(
                     "Bạn đang nợ",
-                    myDebt,
+                    _myDebt,
                     isNegative: true,
                   ),
                 ),
@@ -147,7 +230,7 @@ class _DynamicHomeScreenState extends State<DynamicHomeScreen> {
                 Expanded(
                   child: _buildFinanceCard(
                     "Bạn được trả",
-                    othersOweMe,
+                    _othersOweMe,
                     isNegative: false,
                   ),
                 ),
@@ -163,13 +246,12 @@ class _DynamicHomeScreenState extends State<DynamicHomeScreen> {
               ),
             ),
             const SizedBox(height: 12),
-            _buildShoppingSummary(shoppingItemCount),
+            _buildShoppingSummary(_shoppingItemCount),
           ],
         ),
       ),
     );
   }
-
   // ================= WIDGETS CON =================
   Widget _buildHeader(String name, String houseName, String houseCode) {
     return Row(
@@ -190,6 +272,22 @@ class _DynamicHomeScreenState extends State<DynamicHomeScreen> {
                 color: AppColors.textPrimary,
               ),
             ),
+            const SizedBox(height: 4),
+            Text(
+              houseName,
+              style: const TextStyle(
+                fontSize: 14,
+                color: Colors.grey,
+              ),
+            ),
+            if (houseCode.isNotEmpty)
+              Text(
+                'Mã nhà: $houseCode',
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey,
+                ),
+              ),
           ],
         ),
         Container(
@@ -386,49 +484,62 @@ class _DynamicHomeScreenState extends State<DynamicHomeScreen> {
   }
 
   Widget _buildShoppingSummary(int count) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.shade200),
-      ),
-      child: Row(
-        children: [
-          const Icon(
-            Icons.shopping_cart_outlined,
-            color: Colors.orange,
-            size: 28,
+    return InkWell(
+      onTap: () {
+        if (_houseId == null) return;
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => ShoppingListScreen(houseId: _houseId!),
           ),
-          const SizedBox(width: 16),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                "$count món cần mua",
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
+        );
+      },
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.grey.shade200),
+        ),
+        child: Row(
+          children: [
+            const Icon(
+              Icons.shopping_cart_outlined,
+              color: Colors.orange,
+              size: 28,
+            ),
+            const SizedBox(width: 16),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  "$count món cần mua",
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
                 ),
-              ),
-              const Text(
-                "Nước mắm, Giấy vệ sinh...",
-                style: TextStyle(color: Colors.grey, fontSize: 12),
-              ),
-            ],
-          ),
-          const Spacer(),
-          IconButton(
-            icon: const Icon(
+                const Text(
+                  "Nhấn để xem danh sách",
+                  style: TextStyle(color: Colors.grey, fontSize: 12),
+                ),
+              ],
+            ),
+            const Spacer(),
+            const Icon(
               Icons.arrow_forward_ios,
               size: 16,
               color: Colors.grey,
             ),
-            onPressed: () {},
-          ),
-        ],
+          ],
+        ),
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    _shoppingStreamSub?.cancel();
+    super.dispose();
   }
 }
 

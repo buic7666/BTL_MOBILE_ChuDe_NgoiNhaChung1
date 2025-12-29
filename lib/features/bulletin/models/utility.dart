@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
 enum UtilityType {
@@ -38,17 +39,24 @@ class Utility {
 
   factory Utility.fromJson(Map<String, dynamic> json) {
     return Utility(
-      id: json['id'] as String,
-      name: json['name'] as String,
-      description: json['description'] as String,
-      price: json['price'] as String,
+      id: json['id'] as String? ?? '',
+      name: json['name'] as String? ?? '',
+      description: json['description'] as String? ?? '',
+      price: json['price'] as String? ?? '',
       type: UtilityType.values[json['type'] as int],
       icon: IconData(json['icon'] as int, fontFamily: 'MaterialIcons'),
       color: Color(json['color'] as int),
       isActive: json['isActive'] as bool? ?? true,
-      createdAt: DateTime.parse(json['createdAt'] as String),
-      updatedAt: DateTime.parse(json['updatedAt'] as String),
+      createdAt: _toDate(json['createdAt']),
+      updatedAt: _toDate(json['updatedAt']),
     );
+  }
+
+  static DateTime _toDate(dynamic v) {
+    if (v == null) return DateTime.now();
+    if (v is String) return DateTime.parse(v);
+    if (v is Timestamp) return v.toDate();
+    return DateTime.now();
   }
 
   Map<String, dynamic> toJson() {

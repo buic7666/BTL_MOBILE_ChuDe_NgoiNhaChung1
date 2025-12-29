@@ -37,7 +37,7 @@ class _EnterHouseCodeScreenState extends State<EnterHouseCodeScreen> {
   }
 
   Future<void> _validateAndEnter() async {
-    final code = _controllers.map((c) => c.text).join().toUpperCase();
+    final code = _controllers.map((c) => c.text.trim()).join().toUpperCase();
     if (code.length != 6) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -69,14 +69,13 @@ class _EnterHouseCodeScreenState extends State<EnterHouseCodeScreen> {
       }
 
       // Tham gia nhà bằng mã
-      final success = await houseService.joinHouseByCode(
+      final result = await houseService.joinHouseByCode(
         userId: user.uid,
         houseCode: code,
       );
 
       if (!mounted) return;
       setState(() => _isLoading = false);
-
       if (success) {
         // Vào nhà thành công
         ScaffoldMessenger.of(context).showSnackBar(
@@ -85,6 +84,15 @@ class _EnterHouseCodeScreenState extends State<EnterHouseCodeScreen> {
             backgroundColor: Colors.green,
           ),
         );
+=======
+        if (result['success'] == true) {
+          // Vào nhà thành công
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('✓ Tham gia nhà thành công!'),
+              backgroundColor: Colors.green,
+            ),
+          );
 
         await Future.delayed(const Duration(milliseconds: 500));
 
@@ -109,6 +117,26 @@ class _EnterHouseCodeScreenState extends State<EnterHouseCodeScreen> {
             backgroundColor: Colors.red,
           ),
         );
+          if (mounted) {
+            Navigator.of(context).pushAndRemoveUntil(
+              MaterialPageRoute(builder: (_) => DynamicHomeScreen()),
+              (route) => false,
+            );
+          }
+        } else {
+          final err = (result['error'] ?? 'unknown').toString();
+          String message = '❌ Không thể tham gia nhà.';
+          if (err == 'not-found') message = '❌ Mã nhà không hợp lệ!';
+          else if (err == 'timeout') message = '⏱️ Kết nối chậm. Vui lòng thử lại.';
+          else if (err == 'permission-denied') message = '🔒 Bạn không có quyền. Kiểm tra đăng nhập hoặc rules.';
+          else if (err == 'unavailable') message = '📶 Mạng không ổn định. Thử lại sau.';
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(message),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
       }
     }
   }
