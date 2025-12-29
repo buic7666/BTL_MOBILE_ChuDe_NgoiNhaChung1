@@ -1,18 +1,76 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import '../../../core/services/chore_service.dart';
 
-class RankingScreen extends StatelessWidget {
+class RankingScreen extends StatefulWidget {
   const RankingScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final ranking = [
-      {"name": "Hằng", "point": 62},
-      {"name": "An", "point": 48},
-      {"name": "Bình", "point": 36},
-      {"name": "Nam", "point": 22},
-    ];
+  State<RankingScreen> createState() => _RankingScreenState();
+}
 
-    final int maxPoint = ranking.first["point"] as int;
+class _RankingScreenState extends State<RankingScreen> {
+  List<Map<String, dynamic>> ranking = [];
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadRanking();
+  }
+
+  Future<void> _loadRanking() async {
+    final houseId = await ChoreService().currentUserHouseId();
+    if (houseId == null) {
+      if (mounted) setState(() => _loading = false);
+      return;
+    }
+
+    try {
+      // Lấy danh sách members từ house
+      final houseDoc = await FirebaseFirestore.instance
+          .collection('houses')
+          .doc(houseId)
+          .get();
+      final memberIds = List<String>.from(houseDoc.data()?['members'] ?? []);
+
+      // Lấy điểm từ users collection
+      final rankingList = <Map<String, dynamic>>[];
+      for (final uid in memberIds) {
+        final userDoc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(uid)
+            .get();
+        final data = userDoc.data();
+        rankingList.add({
+          'uid': uid,
+          'name': data?['name'] ?? 'User',
+          'point': data?['points'] ?? 0,
+        });
+      }
+
+      // Sắp xếp theo điểm giảm dần
+      rankingList.sort((a, b) => (b['point'] as int).compareTo(a['point'] as int));
+
+      if (mounted) {
+        setState(() {
+          ranking = rankingList;
+          _loading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _loading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Lỗi tải bảng xếp hạng: $e')),
+        );
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final int maxPoint = ranking.isNotEmpty ? (ranking.first["point"] as int) : 1;
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -29,11 +87,15 @@ class RankingScreen extends StatelessWidget {
         elevation: 0,
         iconTheme: const IconThemeData(color: Color(0xFF3D4AF3)),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            /// 🏆 Danh sách xếp hạng
+      body: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : ranking.isEmpty
+              ? const Center(child: Text('Chưa có dữ liệu xếp hạng'))
+              : Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    children: [
+                      /// 🏆 Danh sách xếp hạng
             ...ranking.asMap().entries.map((entry) {
               final index = entry.key;
               final user = entry.value;
@@ -103,30 +165,31 @@ class RankingScreen extends StatelessWidget {
               );
             }).toList(),
 
-            const SizedBox(height: 12),
+                      const SizedBox(height: 12),
 
-            /// 🏅 Thành viên tích cực
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF6D6DF6), Color(0xFF8E7CF6)],
+                      /// 🏅 Thành viên tích cực
+                      if (ranking.isNotEmpty)
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFF6D6DF6), Color(0xFF8E7CF6)],
+                            ),
+                            borderRadius: BorderRadius.circular(18),
+                          ),
+                          child: Text(
+                            "🏆 Thành viên tích cực tháng: ${ranking.first['name']}",
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        )
+                    ],
+                  ),
                 ),
-                borderRadius: BorderRadius.circular(18),
-              ),
-              child: const Text(
-                "🏆 Thành viên tích cực tháng: Hằng",
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            )
-          ],
-        ),
-      ),
     );
   }
 

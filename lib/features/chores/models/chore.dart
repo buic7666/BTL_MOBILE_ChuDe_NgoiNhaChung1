@@ -8,19 +8,19 @@ class Chore {
   final DateTime? dueDate;
   final bool isCompleted;
   final int points;
-  final bool awarded; // đã phát điểm hay chưa
+  final bool awarded;
   final DateTime createdAt;
   final DateTime updatedAt;
 
-  const Chore({
+  Chore({
     required this.id,
     required this.title,
     this.assignedToUid,
     this.assignedToName,
     this.dueDate,
-    this.isCompleted = false,
-    this.points = 1,
-    this.awarded = false,
+    required this.isCompleted,
+    required this.points,
+    required this.awarded,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -31,12 +31,18 @@ class Chore {
       title: json['title'] as String? ?? '',
       assignedToUid: json['assignedToUid'] as String?,
       assignedToName: json['assignedToName'] as String?,
-      dueDate: (json['dueDate'] as Timestamp?)?.toDate(),
+      dueDate: json['dueDate'] != null
+          ? (json['dueDate'] as Timestamp).toDate()
+          : null,
       isCompleted: json['completed'] as bool? ?? false,
-      points: (json['points'] as num?)?.toInt() ?? 1,
+      points: json['points'] as int? ?? 1,
       awarded: json['awarded'] as bool? ?? false,
-      createdAt: (json['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
-      updatedAt: (json['updatedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      createdAt: json['createdAt'] != null
+          ? (json['createdAt'] as Timestamp).toDate()
+          : DateTime.now(),
+      updatedAt: json['updatedAt'] != null
+          ? (json['updatedAt'] as Timestamp).toDate()
+          : DateTime.now(),
     );
   }
 
@@ -52,31 +58,5 @@ class Chore {
       'createdAt': Timestamp.fromDate(createdAt),
       'updatedAt': Timestamp.fromDate(updatedAt),
     };
-  }
-
-  Chore copyWith({
-    String? id,
-    String? title,
-    String? assignedToUid,
-    String? assignedToName,
-    DateTime? dueDate,
-    bool? isCompleted,
-    int? points,
-    bool? awarded,
-    DateTime? createdAt,
-    DateTime? updatedAt,
-  }) {
-    return Chore(
-      id: id ?? this.id,
-      title: title ?? this.title,
-      assignedToUid: assignedToUid ?? this.assignedToUid,
-      assignedToName: assignedToName ?? this.assignedToName,
-      dueDate: dueDate ?? this.dueDate,
-      isCompleted: isCompleted ?? this.isCompleted,
-      points: points ?? this.points,
-      awarded: awarded ?? this.awarded,
-      createdAt: createdAt ?? this.createdAt,
-      updatedAt: updatedAt ?? this.updatedAt,
-    );
   }
 }
