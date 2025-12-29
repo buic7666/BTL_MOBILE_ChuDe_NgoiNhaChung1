@@ -56,7 +56,7 @@ class _DynamicHomeScreenState extends State<DynamicHomeScreen> {
     if (uid != null) {
       hasHouse = await houseService.hasHouse(uid);
       if (hasHouse) {
-        houseName = await houseService.getHouseName(uid);
+        houseName = await houseService.getHouseName(uid) ?? 'Nhà của bạn';
         houseCode = await houseService.getHouseCode(uid) ?? '';
         houseId = await houseService.getHouseId(uid);
       }
@@ -194,7 +194,6 @@ class _DynamicHomeScreenState extends State<DynamicHomeScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildHeader(userName, '', ''),
             _buildHeader(_userName, _houseName, _houseCode),
             const SizedBox(height: 24),
             const Text(

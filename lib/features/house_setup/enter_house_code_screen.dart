@@ -76,68 +76,49 @@ class _EnterHouseCodeScreenState extends State<EnterHouseCodeScreen> {
 
       if (!mounted) return;
       setState(() => _isLoading = false);
-      if (success) {
-        // Vào nhà thành công
+
+      if (result['success'] == true) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('✓ Tham gia nhà thành công!'),
             backgroundColor: Colors.green,
           ),
         );
-=======
-        if (result['success'] == true) {
-          // Vào nhà thành công
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('✓ Tham gia nhà thành công!'),
-              backgroundColor: Colors.green,
-            ),
-          );
 
         await Future.delayed(const Duration(milliseconds: 500));
-
+        if (!mounted) return;
         Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (_) => DynamicHomeScreen()),
+          MaterialPageRoute(builder: (_) => const DynamicHomeScreen()),
           (route) => false,
         );
       } else {
+        final err = (result['error'] ?? 'unknown').toString();
+        String message = '❌ Không thể tham gia nhà.';
+        if (err == 'not-found') {
+          message = '❌ Mã nhà không hợp lệ!';
+        } else if (err == 'timeout') {
+          message = '⏱️ Kết nối chậm. Vui lòng thử lại.';
+        } else if (err == 'permission-denied') {
+          message = '🔒 Bạn không có quyền. Kiểm tra đăng nhập hoặc rules.';
+        } else if (err == 'unavailable') {
+          message = '📶 Mạng không ổn định. Thử lại sau.';
+        }
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('❌ Mã nhà không hợp lệ!'),
+          SnackBar(
+            content: Text(message),
             backgroundColor: Colors.red,
           ),
         );
       }
     } catch (e) {
-      if (mounted) {
-        setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Lỗi kết nối, vui lòng thử lại: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-          if (mounted) {
-            Navigator.of(context).pushAndRemoveUntil(
-              MaterialPageRoute(builder: (_) => DynamicHomeScreen()),
-              (route) => false,
-            );
-          }
-        } else {
-          final err = (result['error'] ?? 'unknown').toString();
-          String message = '❌ Không thể tham gia nhà.';
-          if (err == 'not-found') message = '❌ Mã nhà không hợp lệ!';
-          else if (err == 'timeout') message = '⏱️ Kết nối chậm. Vui lòng thử lại.';
-          else if (err == 'permission-denied') message = '🔒 Bạn không có quyền. Kiểm tra đăng nhập hoặc rules.';
-          else if (err == 'unavailable') message = '📶 Mạng không ổn định. Thử lại sau.';
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(message),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
-      }
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Lỗi kết nối, vui lòng thử lại: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 

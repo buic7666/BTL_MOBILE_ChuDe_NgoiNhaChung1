@@ -69,8 +69,9 @@ class _AssignScreenState extends State<AssignScreen> {
       ...membersList.map((m) => m['name']!),
       ...choresList
           .map((c) => c.assignedToName)
-          .where((n) => n != null && n!.trim().isNotEmpty && n != 'Chưa phân công')
-          .map((n) => n!.trim()),
+          .whereType<String>()
+          .where((n) => n.trim().isNotEmpty && n != 'Chưa phân công')
+          .map((n) => n.trim()),
     }..removeWhere((n) => n.isEmpty);
 
     final displayNames = displayNamesSet.toList();
