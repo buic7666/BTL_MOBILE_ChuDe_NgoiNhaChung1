@@ -2,6 +2,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../features/bulletin/models/shopping_item.dart';
 import '../../features/bulletin/models/utility.dart';
 import '../../features/bulletin/models/house_rule.dart';
+import '../../features/bulletin/models/wifi_info.dart';
+import '../../features/bulletin/models/emergency_contact.dart';
 
 class BulletinService {
   static final BulletinService _instance = BulletinService._internal();
@@ -132,6 +134,159 @@ class BulletinService {
         .doc(houseId)
         .collection('rules')
         .doc(ruleId)
+        .delete();
+  }
+
+  // --- WiFi Info ---
+  Stream<List<WiFiInfo>> wifiInfoStream(String houseId) {
+    return _firestore
+        .collection('houses')
+        .doc(houseId)
+        .collection('wifi_info')
+        .snapshots()
+        .map((snapshot) => snapshot.docs
+            .map((doc) => WiFiInfo.fromJson(doc.data(), doc.id))
+            .toList());
+  }
+
+  Future<void> addWiFiInfo(String houseId, WiFiInfo wifi) async {
+    final now = DateTime.now();
+    await _firestore
+        .collection('houses')
+        .doc(houseId)
+        .collection('wifi_info')
+        .add({
+      'networkName': wifi.networkName,
+      'password': wifi.password,
+      'networkType': wifi.networkType,
+      'speed': wifi.speed,
+      'provider': wifi.provider,
+      'createdAt': now,
+      'updatedAt': now,
+    });
+  }
+
+  Future<void> updateWiFiInfo(String houseId, WiFiInfo wifi) async {
+    await _firestore
+        .collection('houses')
+        .doc(houseId)
+        .collection('wifi_info')
+        .doc(wifi.id)
+        .update({
+      'networkName': wifi.networkName,
+      'password': wifi.password,
+      'networkType': wifi.networkType,
+      'speed': wifi.speed,
+      'provider': wifi.provider,
+      'updatedAt': DateTime.now(),
+    });
+  }
+
+  Future<void> deleteWiFiInfo(String houseId, String wifiId) async {
+    await _firestore
+        .collection('houses')
+        .doc(houseId)
+        .collection('wifi_info')
+        .doc(wifiId)
+        .delete();
+  }
+
+  // --- Emergency Contacts ---
+  Stream<List<EmergencyContactModel>> emergencyContactsStream(String houseId) {
+    return _firestore
+        .collection('houses')
+        .doc(houseId)
+        .collection('emergency_contacts')
+        .snapshots()
+        .map((snapshot) => snapshot.docs
+            .map((doc) => EmergencyContactModel.fromJson(doc.data(), doc.id))
+            .toList());
+  }
+
+  Future<void> addEmergencyContact(String houseId, EmergencyContactModel contact) async {
+    final now = DateTime.now();
+    await _firestore
+        .collection('houses')
+        .doc(houseId)
+        .collection('emergency_contacts')
+        .add({
+      'name': contact.name,
+      'phoneNumber': contact.phoneNumber,
+      'description': contact.description,
+      'category': contact.category,
+      'createdAt': now,
+      'updatedAt': now,
+    });
+  }
+
+  Future<void> updateEmergencyContact(String houseId, EmergencyContactModel contact) async {
+    await _firestore
+        .collection('houses')
+        .doc(houseId)
+        .collection('emergency_contacts')
+        .doc(contact.id)
+        .update({
+      'name': contact.name,
+      'phoneNumber': contact.phoneNumber,
+      'description': contact.description,
+      'category': contact.category,
+      'updatedAt': DateTime.now(),
+    });
+  }
+
+  Future<void> deleteEmergencyContact(String houseId, String contactId) async {
+    await _firestore
+        .collection('houses')
+        .doc(houseId)
+        .collection('emergency_contacts')
+        .doc(contactId)
+        .delete();
+  }
+
+  // --- Add Utility ---
+  Future<void> addUtility(String houseId, Utility utility) async {
+    final now = DateTime.now();
+    await _firestore
+        .collection('houses')
+        .doc(houseId)
+        .collection('utilities')
+        .add({
+      'name': utility.name,
+      'description': utility.description,
+      'price': utility.price,
+      'type': utility.type.index,
+      'icon': utility.icon.codePoint,
+      'color': utility.color.value,
+      'isActive': utility.isActive,
+      'createdAt': now,
+      'updatedAt': now,
+    });
+  }
+
+  Future<void> updateUtility(String houseId, Utility utility) async {
+    await _firestore
+        .collection('houses')
+        .doc(houseId)
+        .collection('utilities')
+        .doc(utility.id)
+        .update({
+      'name': utility.name,
+      'description': utility.description,
+      'price': utility.price,
+      'type': utility.type.index,
+      'icon': utility.icon.codePoint,
+      'color': utility.color.value,
+      'isActive': utility.isActive,
+      'updatedAt': DateTime.now(),
+    });
+  }
+
+  Future<void> deleteUtility(String houseId, String utilityId) async {
+    await _firestore
+        .collection('houses')
+        .doc(houseId)
+        .collection('utilities')
+        .doc(utilityId)
         .delete();
   }
 }

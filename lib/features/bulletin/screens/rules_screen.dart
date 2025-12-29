@@ -280,14 +280,20 @@ void _showEditRuleDialog(
 }
 
 class RulesScreen extends StatefulWidget {
-  const RulesScreen({Key? key}) : super(key: key);
+  final String? houseId;
+  final List<HouseRule> initialRules;
+
+  const RulesScreen({
+    Key? key,
+    this.houseId,
+    this.initialRules = const [],
+  }) : super(key: key);
 
   @override
   State<RulesScreen> createState() => _RulesScreenState();
 }
 
 class _RulesScreenState extends State<RulesScreen> {
-  String? _houseId;
   StreamSubscription<List<HouseRule>>? _sub;
   List<HouseRule> _rules = [];
   bool _loading = true;
@@ -298,32 +304,39 @@ class _RulesScreenState extends State<RulesScreen> {
     _init();
   }
 
-  Future<void> _init() async {
-    final auth = AuthService();
-    final houseService = HouseService();
-    final uid = auth.currentFirebaseUser?.uid;
-    String? houseId;
-    if (uid != null) {
-      houseId = await houseService.getHouseId(uid);
-    }
-    if (!mounted) return;
-    setState(() {
-      _houseId = houseId;
-    });
-    if (_houseId != null) {
-      _sub?.cancel();
-      _sub = BulletinService().rulesStream(_houseId!).listen((items) {
-        if (!mounted) return;
-        setState(() {
-          _rules = items;
-          _loading = false;
-        });
-      });
+  void _init() {
+    // Use houseId from widget, fall back to user's house if not provided
+    if (widget.houseId != null) {
+      _subscribeToRules(widget.houseId!);
     } else {
+      // Fallback: get houseId from current user
+      final auth = AuthService();
+      final houseService = HouseService();
+      final uid = auth.currentFirebaseUser?.uid;
+      
+      if (uid != null) {
+        houseService.getHouseId(uid).then((houseId) {
+          if (houseId != null && mounted) {
+            _subscribeToRules(houseId);
+          } else if (mounted) {
+            setState(() => _loading = false);
+          }
+        });
+      } else if (mounted) {
+        setState(() => _loading = false);
+      }
+    }
+  }
+
+  void _subscribeToRules(String houseId) {
+    _sub?.cancel();
+    _sub = BulletinService().rulesStream(houseId).listen((items) {
+      if (!mounted) return;
       setState(() {
+        _rules = items;
         _loading = false;
       });
-    }
+    });
   }
 
   @override
@@ -403,12 +416,12 @@ class _RulesScreenState extends State<RulesScreen> {
               else
                 ...rules.map((rule) => RuleItemWidget(
                       rule: rule,
-                      onDelete: _houseId == null
+                      onDelete: widget.houseId == null
                           ? null
                           : () async {
-                              await BulletinService().deleteRule(_houseId!, rule.id!);
+                              await BulletinService().deleteRule(widget.houseId!, rule.id!);
                             },
-                      onEdit: _houseId == null
+                      onEdit: widget.houseId == null
                           ? null
                           : () async {
                               final hr = _rules.firstWhere((r) => r.id == rule.id);
@@ -428,7 +441,7 @@ class _RulesScreenState extends State<RulesScreen> {
                                     createdAt: hr.createdAt,
                                     updatedAt: DateTime.now(),
                                   );
-                                  await BulletinService().updateRule(_houseId!, updated);
+                                  await BulletinService().updateRule(widget.houseId!, updated);
                                 },
                               );
                             },
@@ -437,7 +450,7 @@ class _RulesScreenState extends State<RulesScreen> {
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(
-                  onPressed: _houseId == null
+                  onPressed: widget.houseId == null
                       ? null
                       : () {
                           _showAddRuleDialog(context, (title, content) async {
@@ -451,7 +464,7 @@ class _RulesScreenState extends State<RulesScreen> {
                               createdAt: DateTime.now(),
                               updatedAt: DateTime.now(),
                             );
-                            await BulletinService().addRule(_houseId!, rule);
+                            await BulletinService().addRule(widget.houseId!, rule);
                           });
                         },
                   icon: const Icon(Icons.add),
