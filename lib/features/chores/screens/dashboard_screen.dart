@@ -7,6 +7,7 @@ import 'create_task_screen.dart';
 import 'assign_screen.dart';
 import 'complete_screen.dart';
 import 'ranking_screen.dart';
+import 'task_list_screen.dart';
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
@@ -86,51 +87,57 @@ class DashboardScreen extends StatelessWidget {
               const SizedBox(height: 16),
 
               /// ===== THỐNG KÊ TUẦN =====
-              Container(
-                width: double.infinity,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(18),
-                  boxShadow: const [
-                    BoxShadow(
-                      blurRadius: 10,
-                      offset: Offset(0, 4),
-                      color: Color(0x14000000),
-                    ),
-                  ],
+              GestureDetector(
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const TaskListScreen()),
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      "Thống kê Tuần này",
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF2F2F4F),
+                child: Container(
+                  width: double.infinity,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(18),
+                    boxShadow: const [
+                      BoxShadow(
+                        blurRadius: 10,
+                        offset: Offset(0, 4),
+                        color: Color(0x14000000),
                       ),
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: const [
-                        Expanded(
-                          child:
-                              _StatItem(title: "Việc nhà", value: "12"),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        "Thống kê Tuần này",
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF2F2F4F),
                         ),
-                        _Divider(),
-                        Expanded(
-                          child: _StatItem(title: "Tới hạn", value: "3"),
-                        ),
-                        _Divider(),
-                        Expanded(
-                          child:
-                              _StatItem(title: "Điểm tháng", value: "48"),
-                        ),
-                      ],
-                    ),
-                  ],
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: const [
+                          Expanded(
+                            child:
+                                _StatItem(title: "Việc nhà", value: "12"),
+                          ),
+                          _Divider(),
+                          Expanded(
+                            child: _StatItem(title: "Tới hạn", value: "3"),
+                          ),
+                          _Divider(),
+                          Expanded(
+                            child:
+                                _StatItem(title: "Điểm tháng", value: "48"),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               ),
 
