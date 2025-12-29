@@ -190,47 +190,64 @@ class HouseService {
   }
 
   // Tham gia nhà bằng mã
-  Future<bool> joinHouseByCode({
+  Future<Map<String, dynamic>> joinHouseByCode({
     required String userId,
     required String houseCode,
   }) async {
     try {
-      // Tìm nhà theo mã
+      // Tìm nhà theo mã (giới hạn thời gian)
       final housesQuery = await _firestore
           .collection('houses')
           .where('code', isEqualTo: houseCode)
           .limit(1)
-          .get();
+          .get()
+          .timeout(
+            const Duration(seconds: 12),
+            onTimeout: () => throw TimeoutException('joinHouseByCode query timeout'),
+          );
 
       if (housesQuery.docs.isEmpty) {
         print('House code not found: $houseCode');
-        return false;
+        return {'success': false, 'error': 'not-found'};
       }
 
       final houseDoc = housesQuery.docs.first;
       final houseId = houseDoc.id;
       final now = DateTime.now();
 
-      // Thêm userId vào members của nhà
-      await _firestore.collection('houses').doc(houseId).update({
+      // Gom thao tác vào batch để giảm round-trip và tăng tính nhất quán
+      final batch = _firestore.batch();
+      final houseRef = _firestore.collection('houses').doc(houseId);
+      final userRef = _firestore.collection('users').doc(userId);
+      batch.update(houseRef, {
         'members': FieldValue.arrayUnion([userId]),
         'updatedAt': Timestamp.fromDate(now),
       });
-
-      // Cập nhật (upsert) user document với houseId
-      await _firestore
-          .collection('users')
-          .doc(userId)
-          .set({
-        'houseId': houseId,
-        'updatedAt': Timestamp.fromDate(now),
-      }, SetOptions(merge: true));
+      batch.set(
+        userRef,
+        {
+          'houseId': houseId,
+          'updatedAt': Timestamp.fromDate(now),
+        },
+        SetOptions(merge: true),
+      );
+      await batch.commit().timeout(
+            const Duration(seconds: 12),
+            onTimeout: () => throw TimeoutException('joinHouseByCode commit timeout'),
+          );
 
       print('User $userId joined house with code $houseCode');
-      return true;
+      return {'success': true, 'houseId': houseId};
+    } on TimeoutException catch (e) {
+      print('Timeout joining house: $e');
+      return {'success': false, 'error': 'timeout'};
+    } on FirebaseException catch (e) {
+      // Common: permission-denied, unavailable, aborted, not-found
+      print('FirebaseException joining house: ${e.code}');
+      return {'success': false, 'error': e.code};
     } catch (e) {
       print('Error joining house by code: $e');
-      return false;
+      return {'success': false, 'error': 'unknown'};
     }
   }
 

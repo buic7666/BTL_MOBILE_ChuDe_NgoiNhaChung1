@@ -37,7 +37,7 @@ class _EnterHouseCodeScreenState extends State<EnterHouseCodeScreen> {
   }
 
   Future<void> _validateAndEnter() async {
-    final code = _controllers.map((c) => c.text).join().toUpperCase();
+    final code = _controllers.map((c) => c.text.trim()).join().toUpperCase();
     if (code.length != 6) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -56,7 +56,7 @@ class _EnterHouseCodeScreenState extends State<EnterHouseCodeScreen> {
 
     if (user != null) {
       // Tham gia nhà bằng mã
-      final success = await houseService.joinHouseByCode(
+      final result = await houseService.joinHouseByCode(
         userId: user.uid,
         houseCode: code,
       );
@@ -64,7 +64,7 @@ class _EnterHouseCodeScreenState extends State<EnterHouseCodeScreen> {
       if (mounted) {
         setState(() => _isLoading = false);
 
-        if (success) {
+        if (result['success'] == true) {
           // Vào nhà thành công
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -82,9 +82,15 @@ class _EnterHouseCodeScreenState extends State<EnterHouseCodeScreen> {
             );
           }
         } else {
+          final err = (result['error'] ?? 'unknown').toString();
+          String message = '❌ Không thể tham gia nhà.';
+          if (err == 'not-found') message = '❌ Mã nhà không hợp lệ!';
+          else if (err == 'timeout') message = '⏱️ Kết nối chậm. Vui lòng thử lại.';
+          else if (err == 'permission-denied') message = '🔒 Bạn không có quyền. Kiểm tra đăng nhập hoặc rules.';
+          else if (err == 'unavailable') message = '📶 Mạng không ổn định. Thử lại sau.';
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('❌ Mã nhà không hợp lệ!'),
+            SnackBar(
+              content: Text(message),
               backgroundColor: Colors.red,
             ),
           );

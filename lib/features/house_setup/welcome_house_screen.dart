@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../constants/app_colors.dart';
 import '../../core/services/auth_service.dart';
-import '../../core/services/house_service.dart';
 import 'create_house_screen.dart';
 import 'enter_house_code_screen.dart';
 
