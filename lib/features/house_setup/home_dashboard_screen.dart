@@ -194,6 +194,7 @@ class _DynamicHomeScreenState extends State<DynamicHomeScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            _buildHeader(userName, '', ''),
             _buildHeader(_userName, _houseName, _houseCode),
             const SizedBox(height: 24),
             const Text(
@@ -251,9 +252,6 @@ class _DynamicHomeScreenState extends State<DynamicHomeScreen> {
       ),
     );
   }
-
-  // ================= TAB CHORES =================
-
   // ================= WIDGETS CON =================
   Widget _buildHeader(String name, String houseName, String houseCode) {
     return Row(
@@ -543,5 +541,5 @@ class _DynamicHomeScreenState extends State<DynamicHomeScreen> {
     _shoppingStreamSub?.cancel();
     super.dispose();
   }
-
 }
+

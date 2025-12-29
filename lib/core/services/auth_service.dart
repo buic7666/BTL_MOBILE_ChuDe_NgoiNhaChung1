@@ -1,5 +1,4 @@
 // ignore_for_file: avoid_print
-
 import 'dart:async';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -25,6 +24,12 @@ class AuthService {
 
   bool get isAuthenticated => _auth.currentUser != null;
 
+  /// Firebase user (for Firebase integration) - trả về user với uid thật
+  UserProfile? get currentFirebaseUser => _currentUser;
+
+  /// Đăng ký tài khoản mới (mock) - hỗ trợ email hoặc số điện thoại
+  Future<bool> register({
+=======
   /// Đăng ký tài khoản mới với Firebase Authentication
   /// Returns: {'success': true/false, 'error': error_code_string}
   Future<Map<String, dynamic>> register({
@@ -275,6 +280,10 @@ class AuthService {
       final user = _auth.currentUser;
       if (user == null) return false;
       final now = DateTime.now();
+      final uid = DateTime.now().millisecondsSinceEpoch.toString();
+      final user = UserProfile(
+        uid: uid,
+        email: isEmail ? contact : null,
       await _firestore.collection('users').doc(user.uid).set({
         'uid': user.uid,
         'email': null,
@@ -294,6 +303,21 @@ class AuthService {
         createdAt: now,
         updatedAt: now,
       );
+      _userPasswords[contact] = password;
+      _users[contact] = user;
+      _currentUser = user;
+      
+      // Lưu name vào Firestore
+      await FirebaseFirestore.instance.collection('users').doc(uid).set({
+        'uid': uid,
+        'name': name,
+        'email': isEmail ? contact : null,
+        'phone': !isEmail ? contact : null,
+        'createdAt': Timestamp.fromDate(now),
+        'updatedAt': Timestamp.fromDate(now),
+      }, SetOptions(merge: true));
+      
+      print('Registered user (mock): $contact');
       return true;
     } catch (e) {
       print('createProfileForSignedInUser error: $e');
@@ -373,7 +397,37 @@ class AuthService {
             rethrow;
           }
         }
-
+      // If no registered user, accept any valid-looking credentials as guest login
+      if (email.isNotEmpty && password.length >= 6) {
+        final now = DateTime.now();
+        final uid = DateTime.now().millisecondsSinceEpoch.toString();
+        // Determine if email contains '@' to differentiate email vs phone
+        final isEmail = email.contains('@');
+        final userName = isEmail ? email.split('@').first : 'User';
+        final user = UserProfile(
+          uid: uid,
+          email: isEmail ? email : null,
+          name: userName,
+          avatar: null,
+          phone: !isEmail ? email : null,
+          createdAt: now,
+          updatedAt: now,
+        );
+        _currentUser = user;
+        _users[email] = user;
+        _userPasswords[email] = password;
+        
+        // Lưu name vào Firestore
+        await FirebaseFirestore.instance.collection('users').doc(uid).set({
+          'uid': uid,
+          'name': userName,
+          'email': isEmail ? email : null,
+          'phone': !isEmail ? email : null,
+          'createdAt': Timestamp.fromDate(now),
+          'updatedAt': Timestamp.fromDate(now),
+        }, SetOptions(merge: true));
+        
+        print('Login as new mock user: $email');
         print('Login success for $email');
         return true;
       }

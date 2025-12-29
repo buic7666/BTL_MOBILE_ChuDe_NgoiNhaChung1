@@ -7,6 +7,13 @@ import 'package:firebase_core/firebase_core.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // Initialize Firebase
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+  
+  // Initialize SharedPreferences
   await UserProfileHouseExt.initializeFromStorage();
   // Initialize SharedPreferences
   await Firebase.initializeApp(

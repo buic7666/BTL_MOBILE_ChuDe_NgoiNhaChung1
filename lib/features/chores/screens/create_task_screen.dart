@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../../core/services/chore_service.dart';
+import '../../../core/services/auth_service.dart';
 import 'task_list_screen.dart';
 
 class CreateTaskScreen extends StatefulWidget {
@@ -10,27 +12,64 @@ class CreateTaskScreen extends StatefulWidget {
 
 class _CreateTaskScreenState extends State<CreateTaskScreen> {
   final TextEditingController taskNameController = TextEditingController();
+  final TextEditingController assigneeController = TextEditingController();
 
   String frequency = "Hằng ngày";
-  String assignee = "Minh An";
+  int points = 1;
 
   @override
   void dispose() {
     taskNameController.dispose();
+    assigneeController.dispose();
     super.dispose();
   }
 
-  void createTask() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => TaskListScreen(
-          taskName: taskNameController.text,
-          frequency: frequency,
-          assignee: assignee,
-        ),
-      ),
+  Future<void> createTask() async {
+    final choreService = ChoreService();
+    String? houseId = await choreService.currentUserHouseId();
+    if (houseId == null) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Chưa có nhà. Vui lòng tham gia/tạo nhà.')),
+      );
+      return;
+    }
+
+    final assigneeName = assigneeController.text.trim().isEmpty 
+        ? 'Chưa phân công' 
+        : assigneeController.text.trim();
+
+    final success = await choreService.addChore(
+      houseId: houseId,
+      title: taskNameController.text.trim().isEmpty
+          ? 'Chưa đặt tên'
+          : taskNameController.text.trim(),
+      assignedToUid: AuthService().currentFirebaseUser?.uid,
+      assignedToName: assigneeName,
+      frequency: frequency,
+      points: points,
     );
+
+    if (!mounted) return;
+    if (success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('✓ Đã tạo việc: +$points điểm khi hoàn thành')),
+      );
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => TaskListScreen(
+            taskName: taskNameController.text,
+            frequency: frequency,
+            assignee: assigneeName,
+          ),
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Tạo việc thất bại. Thử lại sau.')),
+      );
+    }
   }
 
   InputDecoration _inputDecoration(String hint) {
@@ -125,18 +164,31 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
                     ),
                   ),
                   const SizedBox(height: 6),
-                  DropdownButtonFormField<String>(
-                    value: assignee,
+                  TextField(
+                    controller: assigneeController,
+                    decoration: _inputDecoration("Minh An"),
+                  ),
+
+                  const SizedBox(height: 18),
+
+                  const Text(
+                    "Điểm thưởng khi hoàn thành",
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF2F2F4F),
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  DropdownButtonFormField<int>(
+                    value: points,
                     decoration: _inputDecoration(""),
                     items: const [
-                      DropdownMenuItem(
-                          value: "Minh An", child: Text("Minh An")),
-                      DropdownMenuItem(
-                          value: "Khánh Vy", child: Text("Khánh Vy")),
-                      DropdownMenuItem(
-                          value: "Hoàng Nam", child: Text("Hoàng Nam")),
+                      DropdownMenuItem(value: 1, child: Text("+1 điểm")),
+                      DropdownMenuItem(value: 3, child: Text("+3 điểm")),
+                      DropdownMenuItem(value: 5, child: Text("+5 điểm")),
                     ],
-                    onChanged: (v) => setState(() => assignee = v!),
+                    onChanged: (v) => setState(() => points = v ?? 1),
                   ),
 
                   const SizedBox(height: 30),
