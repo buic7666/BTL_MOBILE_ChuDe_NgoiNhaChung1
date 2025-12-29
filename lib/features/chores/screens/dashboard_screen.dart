@@ -45,7 +45,7 @@ class DashboardScreen extends StatelessWidget {
 
               const SizedBox(height: 14),
 
-              /// ===== WELCOME CARD (FULL WIDTH) =====
+              /// ===== WELCOME CARD =====
               Container(
                 width: double.infinity,
                 padding:
@@ -56,8 +56,6 @@ class DashboardScreen extends StatelessWidget {
                       Color(0xFF7A74F9),
                       Color(0xFF8E7CF6),
                     ],
-                    begin: Alignment.centerLeft,
-                    end: Alignment.centerRight,
                   ),
                   borderRadius: BorderRadius.circular(18),
                 ),
@@ -90,12 +88,18 @@ class DashboardScreen extends StatelessWidget {
               GestureDetector(
                 onTap: () => Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => const TaskListScreen()),
+                  MaterialPageRoute(
+                    builder: (_) => const TaskListScreen(
+                      taskName: "Tổng hợp việc nhà",
+                      frequency: "Hằng tuần",
+                      assignee: "Cả gia đình",
+                    ),
+                  ),
                 ),
                 child: Container(
                   width: double.infinity,
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 16, vertical: 14),
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(18),
@@ -122,12 +126,13 @@ class DashboardScreen extends StatelessWidget {
                       Row(
                         children: const [
                           Expanded(
-                            child:
-                                _StatItem(title: "Việc nhà", value: "12"),
+                            child: _StatItem(
+                                title: "Việc nhà", value: "12"),
                           ),
                           _Divider(),
                           Expanded(
-                            child: _StatItem(title: "Tới hạn", value: "3"),
+                            child:
+                                _StatItem(title: "Tới hạn", value: "3"),
                           ),
                           _Divider(),
                           Expanded(
@@ -180,8 +185,7 @@ class DashboardScreen extends StatelessWidget {
                 childAspectRatio: 0.95,
                 children: [
                   FeatureCard(
-                    icon:
-                        const Text("📝", style: TextStyle(fontSize: 28)),
+                    icon: const Text("📝", style: TextStyle(fontSize: 28)),
                     title: "Tạo Việc Nhà",
                     desc: "Đã tạo: 12 task",
                     progress: 0.75,
@@ -193,8 +197,7 @@ class DashboardScreen extends StatelessWidget {
                     ),
                   ),
                   FeatureCard(
-                    icon:
-                        const Text("🔄", style: TextStyle(fontSize: 28)),
+                    icon: const Text("🔄", style: TextStyle(fontSize: 28)),
                     title: "Phân Công",
                     desc: "Lượt phân công: 8",
                     progress: 0.5,
@@ -206,8 +209,7 @@ class DashboardScreen extends StatelessWidget {
                     ),
                   ),
                   FeatureCard(
-                    icon:
-                        const Text("✔️", style: TextStyle(fontSize: 28)),
+                    icon: const Text("✔️", style: TextStyle(fontSize: 28)),
                     title: "Hoàn Thành",
                     desc: "Đã hoàn thành: 6",
                     progress: 0.6,
@@ -219,8 +221,7 @@ class DashboardScreen extends StatelessWidget {
                     ),
                   ),
                   FeatureCard(
-                    icon:
-                        const Text("🏆", style: TextStyle(fontSize: 28)),
+                    icon: const Text("🏆", style: TextStyle(fontSize: 28)),
                     title: "Bảng Xếp Hạng",
                     desc: "Top tuần: Hằng – 25 điểm",
                     progress: 0.9,

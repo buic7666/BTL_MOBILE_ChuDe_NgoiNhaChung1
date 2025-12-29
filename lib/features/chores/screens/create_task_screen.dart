@@ -24,7 +24,11 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => const TaskListScreen(),
+        builder: (_) => TaskListScreen(
+          taskName: taskNameController.text,
+          frequency: frequency,
+          assignee: assignee,
+        ),
       ),
     );
   }
@@ -50,16 +54,14 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
       body: SafeArea(
         child: Stack(
           children: [
-            /// ===== MAIN CONTENT =====
             SingleChildScrollView(
               padding:
                   const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const SizedBox(height: 36), // chừa chỗ cho nút back
+                  const SizedBox(height: 36),
 
-                  /// ===== TITLE =====
                   const Center(
                     child: Text(
                       "Tạo Việc Nhà",
@@ -73,7 +75,6 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
 
                   const SizedBox(height: 28),
 
-                  /// ===== TÊN VIỆC =====
                   const Text(
                     "Tên việc:",
                     style: TextStyle(
@@ -90,7 +91,6 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
 
                   const SizedBox(height: 18),
 
-                  /// ===== CHU KỲ =====
                   const Text(
                     "Chu kỳ lặp",
                     style: TextStyle(
@@ -116,7 +116,6 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
 
                   const SizedBox(height: 18),
 
-                  /// ===== NGƯỜI THỰC HIỆN =====
                   const Text(
                     "Người thực hiện",
                     style: TextStyle(
@@ -142,7 +141,6 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
 
                   const SizedBox(height: 30),
 
-                  /// ===== BUTTON =====
                   SizedBox(
                     width: double.infinity,
                     height: 50,
@@ -180,7 +178,6 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
               ),
             ),
 
-            /// ===== BACK BUTTON (NỀN TRẮNG) =====
             Positioned(
               top: 8,
               left: 8,

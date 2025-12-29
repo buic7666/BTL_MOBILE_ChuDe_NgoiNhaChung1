@@ -1,7 +1,16 @@
 import 'package:flutter/material.dart';
 
 class TaskListScreen extends StatelessWidget {
-  const TaskListScreen({super.key});
+  final String taskName;
+  final String frequency;
+  final String assignee;
+
+  const TaskListScreen({
+    super.key,
+    required this.taskName,
+    required this.frequency,
+    required this.assignee,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -13,7 +22,6 @@ class TaskListScreen extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // ===== TITLE =====
               const Center(
                 child: Text(
                   "Danh sách Task",
@@ -27,7 +35,6 @@ class TaskListScreen extends StatelessWidget {
 
               const SizedBox(height: 24),
 
-              // ===== TASK CARD =====
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
@@ -37,7 +44,6 @@ class TaskListScreen extends StatelessWidget {
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // LEFT BORDER
                     Container(
                       width: 4,
                       height: 64,
@@ -48,31 +54,30 @@ class TaskListScreen extends StatelessWidget {
                     ),
                     const SizedBox(width: 12),
 
-                    // CONTENT
-                    const Expanded(
+                    Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            "Đổ rác",
-                            style: TextStyle(
+                            taskName.isEmpty ? "Chưa đặt tên" : taskName,
+                            style: const TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
                               color: Color(0xFF2F2F4F),
                             ),
                           ),
-                          SizedBox(height: 6),
+                          const SizedBox(height: 6),
                           Text(
-                            "Chu kỳ: Hàng tuần",
-                            style: TextStyle(
+                            "Chu kỳ: $frequency",
+                            style: const TextStyle(
                               fontSize: 13,
                               color: Color(0xFF5B5F7D),
                             ),
                           ),
-                          SizedBox(height: 2),
+                          const SizedBox(height: 2),
                           Text(
-                            "Người thực hiện: Minh An",
-                            style: TextStyle(
+                            "Người thực hiện: $assignee",
+                            style: const TextStyle(
                               fontSize: 13,
                               color: Color(0xFF5B5F7D),
                             ),
@@ -86,7 +91,6 @@ class TaskListScreen extends StatelessWidget {
 
               const Spacer(),
 
-              // ===== BACK BUTTON =====
               SizedBox(
                 width: double.infinity,
                 height: 48,
