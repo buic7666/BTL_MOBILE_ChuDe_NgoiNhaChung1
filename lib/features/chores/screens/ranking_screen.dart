@@ -27,29 +27,29 @@ class _RankingScreenState extends State<RankingScreen> {
     }
 
     try {
-      // Lấy danh sách members từ house
-      final houseDoc = await FirebaseFirestore.instance
+      // Lấy tất cả chores đã hoàn thành + đã thưởng
+      final choresSnap = await FirebaseFirestore.instance
           .collection('houses')
           .doc(houseId)
+          .collection('chores')
+          .where('completed', isEqualTo: true)
+          .where('awarded', isEqualTo: true)
           .get();
-      final memberIds = List<String>.from(houseDoc.data()?['members'] ?? []);
 
-      // Lấy điểm từ users collection
-      final rankingList = <Map<String, dynamic>>[];
-      for (final uid in memberIds) {
-        final userDoc = await FirebaseFirestore.instance
-            .collection('users')
-            .doc(uid)
-            .get();
-        final data = userDoc.data();
-        rankingList.add({
-          'uid': uid,
-          'name': data?['name'] ?? 'User',
-          'point': data?['points'] ?? 0,
-        });
+      // Nhóm điểm theo assignedToName
+      final scoreMap = <String, int>{};
+      for (final doc in choresSnap.docs) {
+        final data = doc.data();
+        final assignedToName = data['assignedToName'] as String? ?? 'Không xác định';
+        final points = data['points'] as int? ?? 0;
+
+        scoreMap[assignedToName] = (scoreMap[assignedToName] ?? 0) + points;
       }
 
-      // Sắp xếp theo điểm giảm dần
+      // Chuyển thành list và sắp xếp
+      final rankingList = scoreMap.entries
+          .map((e) => {'name': e.key, 'point': e.value})
+          .toList();
       rankingList.sort((a, b) => (b['point'] as int).compareTo(a['point'] as int));
 
       if (mounted) {
@@ -96,11 +96,11 @@ class _RankingScreenState extends State<RankingScreen> {
                   child: Column(
                     children: [
                       /// 🏆 Danh sách xếp hạng
-            ...ranking.asMap().entries.map((entry) {
-              final index = entry.key;
-              final user = entry.value;
-              final int point = user["point"] as int;
-              final double progress = point / maxPoint;
+                      ...ranking.asMap().entries.map((entry) {
+                        final index = entry.key;
+                        final person = entry.value;
+                        final int point = person["point"] as int;
+                        final double progress = point / (maxPoint > 0 ? maxPoint : 1);
 
               return Container(
                 margin: const EdgeInsets.only(bottom: 14),
@@ -123,7 +123,7 @@ class _RankingScreenState extends State<RankingScreen> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          "#${index + 1} - ${user["name"]}",
+                          "#${index + 1} - ${person["name"]}",
                           style: const TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 16,

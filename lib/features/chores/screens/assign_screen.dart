@@ -14,6 +14,7 @@ class _AssignScreenState extends State<AssignScreen> {
   String? _houseId;
   List<Chore> _chores = [];
   List<Map<String, String>> _members = []; // [{uid, name}]
+  List<String> _displayMemberNames = []; // tên hiển thị (gộp từ users + assignedToName)
   int weekIndex = 1;
   Map<String, String> currentAssign = {};
   final List<String> history = [];
@@ -32,16 +33,26 @@ class _AssignScreenState extends State<AssignScreen> {
       return;
     }
 
-    // Lấy danh sách thành viên từ house
+    // Lấy danh sách thành viên từ house (loại trùng) và map sang tên hiển thị
     final houseDoc = await FirebaseFirestore.instance.collection('houses').doc(hid).get();
-    final memberIds = List<String>.from(houseDoc.data()?['members'] ?? []);
-    
-    // Lấy tên từ users
+    final memberIds = List<String>.from(houseDoc.data()?['members'] ?? []).toSet().toList();
+
+    // Lấy tên từ users với fallback thân thiện
     final membersList = <Map<String, String>>[];
     for (final uid in memberIds) {
       final userDoc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
-      final name = userDoc.data()?['name'] as String? ?? 'User';
-      membersList.add({'uid': uid, 'name': name});
+      final data = userDoc.data() ?? {};
+      final email = data['email'] as String?;
+      final nameFromEmail = email != null && email.contains('@')
+          ? email.split('@').first
+          : null;
+      final name = (data['name'] as String?)?.trim();
+
+      final displayName = (name != null && name.isNotEmpty)
+          ? name
+          : (nameFromEmail ?? uid);
+
+      membersList.add({'uid': uid, 'name': displayName});
     }
 
     // Lấy chores một lần
@@ -53,10 +64,23 @@ class _AssignScreenState extends State<AssignScreen> {
         .get();
     final choresList = choresSnap.docs.map((d) => Chore.fromJson(d.data(), d.id)).toList();
 
+    // Tên hiển thị: gộp tên thành viên (users) + tên được nhập khi tạo việc
+    final displayNamesSet = <String>{
+      ...membersList.map((m) => m['name']!),
+      ...choresList
+          .map((c) => c.assignedToName)
+          .where((n) => n != null && n!.trim().isNotEmpty && n != 'Chưa phân công')
+          .map((n) => n!.trim()),
+    }..removeWhere((n) => n.isEmpty);
+
+    final displayNames = displayNamesSet.toList();
+    displayNames.sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+
     if (!mounted) return;
     setState(() {
       _houseId = hid;
       _members = membersList;
+      _displayMemberNames = displayNames;
       _chores = choresList;
       _loading = false;
     });
@@ -78,10 +102,23 @@ class _AssignScreenState extends State<AssignScreen> {
 
       for (int i = 0; i < _chores.length; i++) {
         final chore = _chores[i];
-        final memberIndex = (weekIndex - 1 + i) % _members.length;
-        final member = _members[memberIndex];
-        final assignedName = member['name']!;
-        final assignedUid = member['uid']!;
+        
+        // Nếu chore đã có assignedToName (từ CreateTaskScreen), giữ nguyên
+        // Nếu chưa có, mới dùng quay vòng
+        String assignedName;
+        String assignedUid;
+        
+        if (chore.assignedToName != null && chore.assignedToName!.isNotEmpty && chore.assignedToName != 'Chưa phân công') {
+          // Giữ tên đã có
+          assignedName = chore.assignedToName!;
+          assignedUid = chore.assignedToUid ?? '';
+        } else {
+          // Quay vòng gán
+          final memberIndex = (weekIndex - 1 + i) % _members.length;
+          final member = _members[memberIndex];
+          assignedName = member['name']!;
+          assignedUid = member['uid']!;
+        }
 
         currentAssign[chore.title] = assignedName;
 
@@ -195,7 +232,7 @@ class _AssignScreenState extends State<AssignScreen> {
           _infoCard(
             title: "Danh sách thành viên",
             icon: Icons.people,
-            children: _members.map((m) => _bulletText(m['name']!)).toList(),
+            children: _displayMemberNames.map((name) => _bulletText(name)).toList(),
           ),
 
           const SizedBox(height: 8),

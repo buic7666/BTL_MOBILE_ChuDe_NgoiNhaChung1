@@ -31,6 +31,7 @@ class ChoreService {
     required String title,
     String? assignedToUid,
     String? assignedToName,
+    String? frequency,
     DateTime? dueDate,
     int points = 1,
   }) async {
@@ -44,6 +45,7 @@ class ChoreService {
         'title': title,
         'assignedToUid': assignedToUid,
         'assignedToName': assignedToName,
+        'frequency': frequency,
         'dueDate': dueDate != null ? Timestamp.fromDate(dueDate) : null,
         'completed': false,
         'points': points,
@@ -105,10 +107,11 @@ class ChoreService {
             });
           }
           
-          awardedUserName = chore.assignedToName ?? userDoc.data()?['name'] ?? 'User';
+          // Ưu tiên assignedToName từ chore, không lấy từ user login
+          awardedUserName = chore.assignedToName ?? 'Không xác định';
           awardedPoints = chore.points;
           
-          print('✓ Cộng ${chore.points} điểm cho user $uid ($awardedUserName)');
+          print('✓ Cộng ${chore.points} điểm cho: $awardedUserName');
         }
       }
 

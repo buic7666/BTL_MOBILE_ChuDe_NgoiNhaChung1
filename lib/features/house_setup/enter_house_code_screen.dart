@@ -54,41 +54,61 @@ class _EnterHouseCodeScreenState extends State<EnterHouseCodeScreen> {
     final houseService = HouseService();
     final user = authService.currentUser;
 
-    if (user != null) {
+    try {
+      if (user == null) {
+        if (mounted) {
+          setState(() => _isLoading = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Bạn cần đăng nhập trước khi tham gia nhà.'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+        return;
+      }
+
       // Tham gia nhà bằng mã
       final success = await houseService.joinHouseByCode(
         userId: user.uid,
         houseCode: code,
       );
 
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+
+      if (success) {
+        // Vào nhà thành công
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('✓ Tham gia nhà thành công!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+
+        await Future.delayed(const Duration(milliseconds: 500));
+
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => DynamicHomeScreen()),
+          (route) => false,
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('❌ Mã nhà không hợp lệ!'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
       if (mounted) {
         setState(() => _isLoading = false);
-
-        if (success) {
-          // Vào nhà thành công
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('✓ Tham gia nhà thành công!'),
-              backgroundColor: Colors.green,
-            ),
-          );
-
-          await Future.delayed(const Duration(milliseconds: 500));
-
-          if (mounted) {
-            Navigator.of(context).pushAndRemoveUntil(
-              MaterialPageRoute(builder: (_) => DynamicHomeScreen()),
-              (route) => false,
-            );
-          }
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('❌ Mã nhà không hợp lệ!'),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Lỗi kết nối, vui lòng thử lại: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
       }
     }
   }

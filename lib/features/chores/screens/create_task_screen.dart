@@ -12,14 +12,15 @@ class CreateTaskScreen extends StatefulWidget {
 
 class _CreateTaskScreenState extends State<CreateTaskScreen> {
   final TextEditingController taskNameController = TextEditingController();
+  final TextEditingController assigneeController = TextEditingController();
 
   String frequency = "Hằng ngày";
-  String assignee = "Minh An";
   int points = 1;
 
   @override
   void dispose() {
     taskNameController.dispose();
+    assigneeController.dispose();
     super.dispose();
   }
 
@@ -34,13 +35,18 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
       return;
     }
 
+    final assigneeName = assigneeController.text.trim().isEmpty 
+        ? 'Chưa phân công' 
+        : assigneeController.text.trim();
+
     final success = await choreService.addChore(
       houseId: houseId,
       title: taskNameController.text.trim().isEmpty
           ? 'Chưa đặt tên'
           : taskNameController.text.trim(),
       assignedToUid: AuthService().currentFirebaseUser?.uid,
-      assignedToName: assignee,
+      assignedToName: assigneeName,
+      frequency: frequency,
       points: points,
     );
 
@@ -55,7 +61,7 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
           builder: (_) => TaskListScreen(
             taskName: taskNameController.text,
             frequency: frequency,
-            assignee: assignee,
+            assignee: assigneeName,
           ),
         ),
       );
@@ -158,18 +164,9 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
                     ),
                   ),
                   const SizedBox(height: 6),
-                  DropdownButtonFormField<String>(
-                    value: assignee,
-                    decoration: _inputDecoration(""),
-                    items: const [
-                      DropdownMenuItem(
-                          value: "Minh An", child: Text("Minh An")),
-                      DropdownMenuItem(
-                          value: "Khánh Vy", child: Text("Khánh Vy")),
-                      DropdownMenuItem(
-                          value: "Hoàng Nam", child: Text("Hoàng Nam")),
-                    ],
-                    onChanged: (v) => setState(() => assignee = v!),
+                  TextField(
+                    controller: assigneeController,
+                    decoration: _inputDecoration("Minh An"),
                   ),
 
                   const SizedBox(height: 18),

@@ -1,5 +1,6 @@
 // ignore_for_file: avoid_print
 
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../models/user_profile.dart';
 
 class AuthService {
@@ -46,8 +47,8 @@ class AuthService {
 
   bool get isAuthenticated => _currentUser != null;
 
-  /// Firebase user (for Firebase integration)
-  dynamic get currentFirebaseUser => null; // Mock implementation
+  /// Firebase user (for Firebase integration) - trả về user với uid thật
+  UserProfile? get currentFirebaseUser => _currentUser;
 
   /// Đăng ký tài khoản mới (mock) - hỗ trợ email hoặc số điện thoại
   Future<bool> register({
@@ -64,8 +65,9 @@ class AuthService {
       }
 
       final now = DateTime.now();
+      final uid = DateTime.now().millisecondsSinceEpoch.toString();
       final user = UserProfile(
-        uid: DateTime.now().millisecondsSinceEpoch.toString(),
+        uid: uid,
         email: isEmail ? contact : null,
         name: name,
         avatar: null,
@@ -76,6 +78,17 @@ class AuthService {
       _userPasswords[contact] = password;
       _users[contact] = user;
       _currentUser = user;
+      
+      // Lưu name vào Firestore
+      await FirebaseFirestore.instance.collection('users').doc(uid).set({
+        'uid': uid,
+        'name': name,
+        'email': isEmail ? contact : null,
+        'phone': !isEmail ? contact : null,
+        'createdAt': Timestamp.fromDate(now),
+        'updatedAt': Timestamp.fromDate(now),
+      }, SetOptions(merge: true));
+      
       print('Registered user (mock): $contact');
       return true;
     } catch (e) {
@@ -100,12 +113,14 @@ class AuthService {
       // If no registered user, accept any valid-looking credentials as guest login
       if (email.isNotEmpty && password.length >= 6) {
         final now = DateTime.now();
+        final uid = DateTime.now().millisecondsSinceEpoch.toString();
         // Determine if email contains '@' to differentiate email vs phone
         final isEmail = email.contains('@');
+        final userName = isEmail ? email.split('@').first : 'User';
         final user = UserProfile(
-          uid: DateTime.now().millisecondsSinceEpoch.toString(),
+          uid: uid,
           email: isEmail ? email : null,
-          name: isEmail ? email.split('@').first : 'User',
+          name: userName,
           avatar: null,
           phone: !isEmail ? email : null,
           createdAt: now,
@@ -114,6 +129,17 @@ class AuthService {
         _currentUser = user;
         _users[email] = user;
         _userPasswords[email] = password;
+        
+        // Lưu name vào Firestore
+        await FirebaseFirestore.instance.collection('users').doc(uid).set({
+          'uid': uid,
+          'name': userName,
+          'email': isEmail ? email : null,
+          'phone': !isEmail ? email : null,
+          'createdAt': Timestamp.fromDate(now),
+          'updatedAt': Timestamp.fromDate(now),
+        }, SetOptions(merge: true));
+        
         print('Login as new mock user: $email');
         return true;
       }

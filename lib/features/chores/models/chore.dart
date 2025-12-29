@@ -5,6 +5,7 @@ class Chore {
   final String title;
   final String? assignedToUid;
   final String? assignedToName;
+  final String? frequency;
   final DateTime? dueDate;
   final bool isCompleted;
   final int points;
@@ -17,6 +18,7 @@ class Chore {
     required this.title,
     this.assignedToUid,
     this.assignedToName,
+    this.frequency,
     this.dueDate,
     required this.isCompleted,
     required this.points,
@@ -31,6 +33,7 @@ class Chore {
       title: json['title'] as String? ?? '',
       assignedToUid: json['assignedToUid'] as String?,
       assignedToName: json['assignedToName'] as String?,
+        frequency: json['frequency'] as String?,
       dueDate: json['dueDate'] != null
           ? (json['dueDate'] as Timestamp).toDate()
           : null,
@@ -51,6 +54,7 @@ class Chore {
       'title': title,
       'assignedToUid': assignedToUid,
       'assignedToName': assignedToName,
+      'frequency': frequency,
       'dueDate': dueDate != null ? Timestamp.fromDate(dueDate!) : null,
       'completed': isCompleted,
       'points': points,

@@ -101,6 +101,14 @@ class TaskListScreen extends StatelessWidget {
                                         ),
                                         const SizedBox(height: 2),
                                         Text(
+                                          'Chu kỳ: ${c.frequency ?? 'Chưa đặt'}',
+                                          style: const TextStyle(
+                                            fontSize: 13,
+                                            color: Color(0xFF5B5F7D),
+                                          ),
+                                        ),
+                                        const SizedBox(height: 2),
+                                        Text(
                                           'Trạng thái: ${c.isCompleted ? 'Đã xong' : 'Chưa xong'} • +${c.points} điểm',
                                           style: const TextStyle(
                                             fontSize: 13,
