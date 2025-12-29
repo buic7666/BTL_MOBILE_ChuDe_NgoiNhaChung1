@@ -46,6 +46,9 @@ class AuthService {
 
   bool get isAuthenticated => _currentUser != null;
 
+  /// Firebase user (for Firebase integration)
+  dynamic get currentFirebaseUser => null; // Mock implementation
+
   /// Đăng ký tài khoản mới (mock) - hỗ trợ email hoặc số điện thoại
   Future<bool> register({
     required String contact,

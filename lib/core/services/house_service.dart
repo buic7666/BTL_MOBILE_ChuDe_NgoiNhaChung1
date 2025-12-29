@@ -137,4 +137,11 @@ class HouseService {
     if (userId == null) return null;
     return _userHouses[userId]?['code'];
   }
+
+  // Lấy ID nhà của user (nếu có)
+  Future<String?> getHouseId(String? userId) async {
+    if (userId == null) return null;
+    // In mock implementation, use houseCode as houseId
+    return _userHouses[userId]?['code'];
+  }
 }
