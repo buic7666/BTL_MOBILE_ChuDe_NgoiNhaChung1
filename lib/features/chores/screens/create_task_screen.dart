@@ -29,10 +29,6 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
     );
   }
 
-  void cancel() {
-    Navigator.pop(context);
-  }
-
   InputDecoration _inputDecoration(String hint) {
     return InputDecoration(
       hintText: hint,
@@ -47,143 +43,11 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
     );
   }
 
-  Widget _gradientButton({
-    required String text,
-    required VoidCallback onPressed,
-    required List<Color> colors,
-    required double width,
-  }) {
-    return SizedBox(
-      width: width,
-      height: 50, // 👈 CÙNG CHIỀU CAO
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(colors: colors),
-          borderRadius: BorderRadius.circular(14),
-        ),
-        child: ElevatedButton(
-          onPressed: onPressed,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.transparent,
-            shadowColor: Colors.transparent,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(14),
-            ),
-          ),
-          child: const Text(
-            "Huỷ",
-            style: TextStyle(
-              fontSize: 16, // 👈 CÙNG FONT
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
-
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
-<<<<<<< Updated upstream
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Center(
-                child: Text(
-                  "Tạo Việc Nhà",
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF2F5BFF),
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 28),
-
-              const Text(
-                "Tên việc:",
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF2F2F4F),
-                ),
-              ),
-              const SizedBox(height: 6),
-              TextField(
-                controller: taskNameController,
-                decoration: _inputDecoration("VD: Đổ rác"),
-              ),
-
-              const SizedBox(height: 18),
-
-              const Text(
-                "Chu kỳ lặp",
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF2F2F4F),
-                ),
-              ),
-              const SizedBox(height: 6),
-              DropdownButtonFormField<String>(
-                value: frequency,
-                decoration: _inputDecoration(""),
-                items: const [
-                  DropdownMenuItem(
-                      value: "Hằng ngày", child: Text("Hằng ngày")),
-                  DropdownMenuItem(
-                      value: "Hằng tuần", child: Text("Hằng tuần")),
-                  DropdownMenuItem(
-                      value: "Hằng tháng", child: Text("Hằng tháng")),
-                ],
-                onChanged: (v) => setState(() => frequency = v!),
-              ),
-
-              const SizedBox(height: 18),
-
-              const Text(
-                "Người thực hiện",
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF2F2F4F),
-                ),
-              ),
-              const SizedBox(height: 6),
-              DropdownButtonFormField<String>(
-                value: assignee,
-                decoration: _inputDecoration(""),
-                items: const [
-                  DropdownMenuItem(
-                      value: "Minh An", child: Text("Minh An")),
-                  DropdownMenuItem(
-                      value: "Khánh Vy", child: Text("Khánh Vy")),
-                  DropdownMenuItem(
-                      value: "Hoàng Nam", child: Text("Hoàng Nam")),
-                ],
-                onChanged: (v) => setState(() => assignee = v!),
-              ),
-
-              const SizedBox(height: 30),
-
-              // ===== NÚT TẠO (FULL WIDTH) =====
-              SizedBox(
-                width: double.infinity,
-                height: 50,
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFF5B6CFF), Color(0xFF8A7CFF)],
-=======
         child: Stack(
           children: [
             /// ===== MAIN CONTENT =====
@@ -204,7 +68,6 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
                         fontWeight: FontWeight.bold,
                         color: Color(0xFF2F5BFF),
                       ),
->>>>>>> Stashed changes
                     ),
                   ),
 
@@ -344,49 +207,8 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
                   ),
                 ),
               ),
-<<<<<<< Updated upstream
-
-              const SizedBox(height: 14),
-
-              // ===== NÚT HUỶ (NGẮN HƠN, GIỮA) =====
-              Center(
-                child: SizedBox(
-                  width: screenWidth * 0.45, // 👈 NGẮN HƠN
-                  height: 50,
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFF7B8CFF), Color(0xFF9B8CFF)],
-                      ),
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    child: ElevatedButton(
-                      onPressed: cancel,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.transparent,
-                        shadowColor: Colors.transparent,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                      ),
-                      child: const Text(
-                        "Huỷ",
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-=======
             ),
           ],
->>>>>>> Stashed changes
         ),
       ),
     );
