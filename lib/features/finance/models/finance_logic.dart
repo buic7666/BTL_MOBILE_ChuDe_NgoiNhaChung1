@@ -2,70 +2,115 @@
 Map<String, double> computeNetBalances(
   List<Map<String, dynamic>> expenses, [
   Map<String, double>? settlements,
+  String? currentUserId,
+  List<String>? memberIds,
 ]) {
-  final members = ['you', 'an', 'binh', 'chi'];
+  // Dùng memberIds từ database, fallback về default nếu không có
+  final members = memberIds ?? ['you', 'an', 'binh', 'chi'];
+  final currentUser = currentUserId ?? 'you';
+
   final Map<String, double> net = {for (var m in members) m: 0.0};
 
   for (final e in expenses) {
-    final amount = (e['amount'] is num) ? (e['amount'] as num).toDouble() : 0.0;
-    final payerRaw = (e['payer'] ?? '').toString();
-    final payer = payerRaw.toLowerCase();
-    final splitRaw = (e['splitMode'] ?? '').toString();
+    // Bỏ qua những expense đã thanh toán (settled - dùng để compatibility)
+    if (e['settled'] == true) continue;
 
-    Map<String, double> shares = {for (var m in members) m: 0.0};
+    final totalAmount = (e['totalAmount'] is num)
+        ? (e['totalAmount'] as num).toDouble()
+        : (e['amount'] is num)
+        ? (e['amount'] as num).toDouble()
+        : 0.0;
+    final payerId = (e['payer'] ?? e['paidBy'] ?? '').toString();
 
-    if (splitRaw.contains('percent')) {
-      final sd = e['splitDetails'];
-      final pct = sd is Map
-          ? (sd['percent'] is num
-                ? (sd['percent'] as num).toDouble()
-                : double.tryParse(sd['percent'].toString()) ?? 0.0)
-          : 0.0;
-      final pctMember = sd is Map
-          ? (sd['memberId']?.toString().toLowerCase() ?? '')
-          : '';
-      final percentAmount = amount * (pct / 100.0);
-      final others = members.where((m) => m != pctMember).toList();
-      final perOther = others.isNotEmpty
-          ? ((amount - percentAmount) / others.length)
-          : 0.0;
-      for (final m in members) {
-        shares[m] = (m == pctMember) ? percentAmount : perOther;
+    // Lấy participants từ expense
+    final participantsData = e['participants'];
+    List<String> participants = [];
+
+    if (participantsData is Map) {
+      participants = participantsData.keys
+          .where((key) => participantsData[key] == true)
+          .map((key) => key.toString())
+          .toList();
+    } else if (participantsData is List) {
+      participants = participantsData.map((x) => x.toString()).toList();
+    }
+    if (participants.isEmpty) {
+      participants = members;
+    }
+
+    // Tính số tiền từng người phải chịu dựa trên splitMode
+    final splitMode = e['splitMode']?.toString() ?? 'SplitMode.equal';
+    final splitDetails = e['splitDetails'] as Map<String, dynamic>?;
+    final Map<String, dynamic> settledPairs =
+        (e['settledPairs'] as Map<String, dynamic>?) ?? {};
+    Map<String, double> splitAmounts = {};
+
+    if (splitMode.contains('percent')) {
+      final percent = (splitDetails?['percent'] ?? 0) as num;
+      final percentMember = splitDetails?['memberId']?.toString();
+      if (percentMember != null) {
+        final pctAmount = totalAmount * percent / 100;
+        splitAmounts[percentMember] = pctAmount;
+        final others = participants.where((m) => m != percentMember).toList();
+        if (others.isNotEmpty) {
+          final remain = totalAmount - pctAmount;
+          final per = remain / others.length;
+          for (final m in others) {
+            splitAmounts[m] = per;
+          }
+        }
       }
-    } else if (splitRaw.contains('perPerson') || e['selectedMembers'] != null) {
+    } else if (splitMode.contains('perPerson')) {
       final selected = e['selectedMembers'] is List
-          ? (e['selectedMembers'] as List)
-                .map((x) => x.toString().toLowerCase())
-                .where((x) => members.contains(x))
-                .toList()
+          ? (e['selectedMembers'] as List).map((x) => x.toString()).toList()
           : <String>[];
-      // Ensure payer is counted as a participant; user expectation often includes payer in split.
-      final participants = <String>{...selected};
-      if (payer.isNotEmpty) {
-        participants.add(payer);
-      }
-      final use = participants.isNotEmpty ? participants.toList() : members;
-      final sc = use.isNotEmpty ? use.length : 1;
-      final perShare = amount / sc;
-      for (final m in members) {
-        shares[m] = use.contains(m) ? perShare : 0.0;
+      final use = selected.isNotEmpty ? selected : participants;
+      if (use.isNotEmpty) {
+        final per = totalAmount / use.length;
+        for (final m in use) {
+          splitAmounts[m] = per;
+        }
       }
     } else {
-      final per = amount / members.length;
-      for (final m in members) {
-        shares[m] = per;
+      // Chia đều
+      final use = participants.isNotEmpty ? participants : members;
+      if (use.isNotEmpty) {
+        final per = totalAmount / use.length;
+        for (final m in use) {
+          splitAmounts[m] = per;
+        }
       }
     }
 
-    if (payer == 'you') {
-      for (final m in members) {
-        if (m == 'you') continue;
-        net[m] = (net[m] ?? 0.0) + (shares[m] ?? 0.0);
+    // Cập nhật balances
+    for (final entry in splitAmounts.entries) {
+      final memberId = entry.key;
+      final perPerson = entry.value;
+      if (memberId == payerId) continue; // người trả không nợ chính mình
+
+      // Kiểm tra xem cặp này đã settled chưa (check cả 2 chiều)
+      final pairKey1 = '$payerId:$memberId';
+      final pairKey2 = '$memberId:$payerId';
+      if (settledPairs.containsKey(pairKey1) ||
+          settledPairs.containsKey(pairKey2)) {
+        continue; // Bỏ qua cặp đã thanh toán
       }
-    } else {
-      final youShare = shares['you'] ?? 0.0;
-      final normalized = payer;
-      net[normalized] = (net[normalized] ?? 0.0) - youShare;
+
+      // Dùng sorted key để match logic lưu ở frontend
+      final ids = [payerId, memberId];
+      ids.sort();
+      final sortedPairKey = '${ids[0]}:${ids[1]}';
+      if (settledPairs.containsKey(sortedPairKey)) {
+        continue;
+      }
+
+      if (memberId == currentUser) {
+        // currentUser nợ payer
+        net[payerId] = (net[payerId] ?? 0.0) - perPerson;
+      } else if (payerId == currentUser) {
+        // người khác nợ currentUser
+        net[memberId] = (net[memberId] ?? 0.0) + perPerson;
+      }
     }
   }
 
