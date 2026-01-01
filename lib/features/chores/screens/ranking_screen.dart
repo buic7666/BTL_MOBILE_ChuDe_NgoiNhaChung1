@@ -20,52 +20,6 @@ class _RankingScreenState extends State<RankingScreen> {
   }
 
   Future<void> _loadRanking() async {
-    try {
-      final houseId = await ChoreService().currentUserHouseId();
-      if (houseId == null) {
-        if (mounted) setState(() => _loading = false);
-        return;
-      }
-
-      // Lấy danh sách member từ house
-      final houseDoc = await FirebaseFirestore.instance
-          .collection('houses')
-          .doc(houseId)
-          .get();
-      final members = List<String>.from(houseDoc.data()?['members'] ?? []);
-      if (members.isEmpty) {
-        if (mounted) setState(() => _loading = false);
-        return;
-      }
-
-      // Firestore whereIn tối đa 10 phần tử -> chia lô
-      final List<Map<String, dynamic>> rankingList = [];
-      for (int i = 0; i < members.length; i += 10) {
-        final chunk = members.sublist(i, i + 10 > members.length ? members.length : i + 10);
-        final snap = await FirebaseFirestore.instance
-            .collection('users')
-            .where(FieldPath.documentId, whereIn: chunk)
-            .get();
-
-        for (final doc in snap.docs) {
-          final data = doc.data();
-          final nameField = data['name'] as String?;
-          final emailField = data['email'] as String?;
-          final name = (nameField?.isNotEmpty == true)
-              ? nameField!
-              : (emailField?.split('@').first ?? doc.id);
-          final points = data['points'] as int? ?? 0;
-          rankingList.add({'name': name, 'point': points});
-        }
-      }
-
-      // Chỉ hiển thị người có điểm > 0
-      final filtered = rankingList.where((e) => (e['point'] as int) > 0).toList();
-      filtered.sort((a, b) => (b['point'] as int).compareTo(a['point'] as int));
-
-      if (mounted) {
-        setState(() {
-          ranking = filtered;
     final houseId = await ChoreService().currentUserHouseId();
     if (houseId == null) {
       if (mounted) setState(() => _loading = false);

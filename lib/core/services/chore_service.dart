@@ -67,20 +67,19 @@ class ChoreService {
     required Chore chore,
   }) async {
     try {
-        final docRef = _firestore
       final docRef = _firestore
           .collection('houses')
           .doc(houseId)
           .collection('chores')
           .doc(chore.id);
 
-        // Người nhận điểm: ưu tiên assignedToUid, fallback người đang bấm
-        final currentUser = AuthService().currentFirebaseUser;
-        final uid = chore.assignedToUid ?? currentUser?.uid;
-        final displayName = chore.assignedToName ??
+      // Người nhận điểm: ưu tiên assignedToUid, fallback người đang bấm
+      final currentUser = AuthService().currentFirebaseUser;
+      final uid = chore.assignedToUid ?? currentUser?.uid;
+      final displayName = chore.assignedToName ??
           (currentUser?.displayName?.trim().isNotEmpty == true
-            ? currentUser!.displayName!
-            : (currentUser?.email?.split('@').first ?? 'Không xác định'));
+              ? currentUser!.displayName!
+              : (currentUser?.email?.split('@').first ?? 'Không xác định'));
 
       final newCompleted = !chore.isCompleted;
       final batch = _firestore.batch();
@@ -102,7 +101,7 @@ class ChoreService {
       // Người nhận điểm: uid (đã lấy ở trên). Nếu vẫn null => không cộng điểm.
       if (newCompleted && !chore.awarded && uid != null) {
         final userRef = _firestore.collection('users').doc(uid);
-        
+
         // Đảm bảo user document tồn tại, khởi tạo points = 0 nếu chưa có
         final userDoc = await userRef.get();
         if (!userDoc.exists) {
@@ -118,40 +117,12 @@ class ChoreService {
             'updatedAt': Timestamp.fromDate(DateTime.now()),
           });
         }
-        
+
         // Ưu tiên assignedToName từ chore, nếu không có thì lấy displayName/email
         awardedUserName = displayName;
         awardedPoints = chore.points;
-        
+
         print('✓ Cộng ${chore.points} điểm cho: $awardedUserName');
-      // Cộng điểm nếu hoàn thành và chưa awarded
-      if (newCompleted && !chore.awarded) {
-        final uid = chore.assignedToUid ?? AuthService().currentFirebaseUser?.uid;
-        if (uid != null) {
-          final userRef = _firestore.collection('users').doc(uid);
-          
-          // Đảm bảo user document tồn tại, khởi tạo points = 0 nếu chưa có
-          final userDoc = await userRef.get();
-          if (!userDoc.exists) {
-            batch.set(userRef, {
-              'uid': uid,
-              'points': chore.points,
-              'createdAt': Timestamp.fromDate(DateTime.now()),
-              'updatedAt': Timestamp.fromDate(DateTime.now()),
-            });
-          } else {
-            batch.update(userRef, {
-              'points': FieldValue.increment(chore.points),
-              'updatedAt': Timestamp.fromDate(DateTime.now()),
-            });
-          }
-          
-          // Ưu tiên assignedToName từ chore, không lấy từ user login
-          awardedUserName = chore.assignedToName ?? 'Không xác định';
-          awardedPoints = chore.points;
-          
-          print('✓ Cộng ${chore.points} điểm cho: $awardedUserName');
-        }
       }
 
       await batch.commit();

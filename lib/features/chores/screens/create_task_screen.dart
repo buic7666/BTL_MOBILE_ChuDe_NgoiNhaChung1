@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import '../../../core/services/chore_service.dart';
-import '../../../core/services/auth_service.dart';
-import 'task_list_screen.dart';
 
 class CreateTaskScreen extends StatefulWidget {
   const CreateTaskScreen({super.key});
@@ -26,7 +24,7 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
 
   Future<void> createTask() async {
     final choreService = ChoreService();
-    String? houseId = await choreService.currentUserHouseId();
+    final houseId = await choreService.currentUserHouseId();
     if (houseId == null) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -35,18 +33,17 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
       return;
     }
 
-    final assigneeName = assigneeController.text.trim().isEmpty 
-        ? 'Chưa phân công' 
+    final assigneeName = assigneeController.text.trim().isEmpty
+        ? 'Chưa phân công'
         : assigneeController.text.trim();
+    final title = taskNameController.text.trim().isEmpty
+        ? 'Chưa đặt tên'
+        : taskNameController.text.trim();
 
     final success = await choreService.addChore(
       houseId: houseId,
-      title: taskNameController.text.trim().isEmpty
-          ? 'Chưa đặt tên'
-          : taskNameController.text.trim(),
-      assignedToUid: null, // chưa phân công; người bấm hoàn thành sẽ nhận điểm
-      assignedToName: null,
-      assignedToUid: AuthService().currentFirebaseUser?.uid,
+      title: title,
+      assignedToUid: null,
       assignedToName: assigneeName,
       frequency: frequency,
       points: points,
@@ -57,17 +54,7 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('✓ Đã tạo việc: +$points điểm khi hoàn thành')),
       );
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => TaskListScreen(
-            taskName: taskNameController.text,
-            frequency: frequency,
-            assignee: '—',
-            assignee: assigneeName,
-          ),
-        ),
-      );
+      Navigator.pop(context);
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Tạo việc thất bại. Thử lại sau.')),
@@ -80,8 +67,7 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
       hintText: hint,
       filled: true,
       fillColor: const Color(0xFFF1F1F6),
-      contentPadding:
-          const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
         borderSide: BorderSide.none,
@@ -97,13 +83,11 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
         child: Stack(
           children: [
             SingleChildScrollView(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const SizedBox(height: 36),
-
                   const Center(
                     child: Text(
                       "Tạo Việc Nhà",
@@ -114,9 +98,7 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
                       ),
                     ),
                   ),
-
                   const SizedBox(height: 28),
-
                   const Text(
                     "Tên việc:",
                     style: TextStyle(
@@ -130,9 +112,7 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
                     controller: taskNameController,
                     decoration: _inputDecoration("VD: Đổ rác"),
                   ),
-
                   const SizedBox(height: 18),
-
                   const Text(
                     "Chu kỳ lặp",
                     style: TextStyle(
@@ -146,47 +126,13 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
                     value: frequency,
                     decoration: _inputDecoration(""),
                     items: const [
-                      DropdownMenuItem(
-                          value: "Hằng ngày", child: Text("Hằng ngày")),
-                      DropdownMenuItem(
-                          value: "Hằng tuần", child: Text("Hằng tuần")),
-                      DropdownMenuItem(
-                          value: "Hằng tháng", child: Text("Hằng tháng")),
+                      DropdownMenuItem(value: "Hằng ngày", child: Text("Hằng ngày")),
+                      DropdownMenuItem(value: "Hằng tuần", child: Text("Hằng tuần")),
+                      DropdownMenuItem(value: "Hằng tháng", child: Text("Hằng tháng")),
                     ],
-                    onChanged: (v) => setState(() => frequency = v!),
+                    onChanged: (v) => setState(() => frequency = v ?? "Hằng ngày"),
                   ),
-
                   const SizedBox(height: 18),
-
-                  const Text(
-                    "Chu kỳ lặp",
-                    "Người thực hiện",
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF2F2F4F),
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  DropdownButtonFormField<String>(
-                    value: frequency,
-                    decoration: _inputDecoration(""),
-                    items: const [
-                      DropdownMenuItem(
-                          value: "Hằng ngày", child: Text("Hằng ngày")),
-                      DropdownMenuItem(
-                          value: "Hằng tuần", child: Text("Hằng tuần")),
-                      DropdownMenuItem(
-                          value: "Hằng tháng", child: Text("Hằng tháng")),
-                    ],
-                    onChanged: (v) => setState(() => frequency = v!),
-                  TextField(
-                    controller: assigneeController,
-                    decoration: _inputDecoration("Minh An"),
-                  ),
-
-                  const SizedBox(height: 18),
-
                   const Text(
                     "Điểm thưởng khi hoàn thành",
                     style: TextStyle(
@@ -206,19 +152,14 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
                     ],
                     onChanged: (v) => setState(() => points = v ?? 1),
                   ),
-
                   const SizedBox(height: 30),
-
                   SizedBox(
                     width: double.infinity,
                     height: 50,
                     child: DecoratedBox(
                       decoration: BoxDecoration(
                         gradient: const LinearGradient(
-                          colors: [
-                            Color(0xFF5B6CFF),
-                            Color(0xFF8A7CFF)
-                          ],
+                          colors: [Color(0xFF5B6CFF), Color(0xFF8A7CFF)],
                         ),
                         borderRadius: BorderRadius.circular(14),
                       ),
@@ -245,7 +186,6 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
                 ],
               ),
             ),
-
             Positioned(
               top: 8,
               left: 8,

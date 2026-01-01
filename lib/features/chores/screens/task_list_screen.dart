@@ -1,25 +1,15 @@
 import 'package:flutter/material.dart';
 import '../../../core/services/chore_service.dart';
 import '../models/chore.dart';
-class TaskListScreen extends StatefulWidget {
-class TaskListScreen extends StatelessWidget {
-  final String taskName;
-  final String frequency;
-  final String assignee;
 
-  const TaskListScreen({
-    super.key,
-    required this.taskName,
-    required this.frequency,
-    required this.assignee,
-  });
+class TaskListScreen extends StatefulWidget {
+  const TaskListScreen({super.key});
 
   @override
   State<TaskListScreen> createState() => _TaskListScreenState();
 }
 
 class _TaskListScreenState extends State<TaskListScreen> {
-
   void _showDeleteDialog(BuildContext context, String houseId, Chore chore) {
     showDialog(
       context: context,
@@ -163,10 +153,7 @@ class _TaskListScreenState extends State<TaskListScreen> {
                   ),
                 ),
               ),
-
               const SizedBox(height: 24),
-
-              // Danh sách từ Firestore
               Expanded(
                 child: FutureBuilder<String?>(
                   future: ChoreService().currentUserHouseId(),
@@ -255,8 +242,8 @@ class _TaskListScreenState extends State<TaskListScreen> {
                                         _showEditDialog(context, hid, c);
                                       }
                                     },
-                                    itemBuilder: (BuildContext context) => [
-                                      const PopupMenuItem<String>(
+                                    itemBuilder: (BuildContext context) => const [
+                                      PopupMenuItem<String>(
                                         value: 'edit',
                                         child: Row(
                                           children: [
@@ -266,7 +253,7 @@ class _TaskListScreenState extends State<TaskListScreen> {
                                           ],
                                         ),
                                       ),
-                                      const PopupMenuItem<String>(
+                                      PopupMenuItem<String>(
                                         value: 'delete',
                                         child: Row(
                                           children: [
@@ -288,9 +275,7 @@ class _TaskListScreenState extends State<TaskListScreen> {
                   },
                 ),
               ),
-
               const SizedBox(height: 12),
-
               SizedBox(
                 width: double.infinity,
                 height: 48,

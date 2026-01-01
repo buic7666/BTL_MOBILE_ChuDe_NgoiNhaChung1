@@ -15,9 +15,6 @@ void main() async {
   
   // Initialize SharedPreferences
   await UserProfileHouseExt.initializeFromStorage();
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
 
   runApp(const MyApp());
 }
