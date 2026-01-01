@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../../core/services/chore_service.dart';
 import '../models/chore.dart';
-
 class TaskListScreen extends StatefulWidget {
+class TaskListScreen extends StatelessWidget {
   final String taskName;
   final String frequency;
   final String assignee;

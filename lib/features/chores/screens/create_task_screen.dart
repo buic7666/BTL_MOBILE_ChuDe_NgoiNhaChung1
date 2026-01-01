@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../core/services/chore_service.dart';
+import '../../../core/services/auth_service.dart';
 import 'task_list_screen.dart';
 
 class CreateTaskScreen extends StatefulWidget {
@@ -11,6 +12,7 @@ class CreateTaskScreen extends StatefulWidget {
 
 class _CreateTaskScreenState extends State<CreateTaskScreen> {
   final TextEditingController taskNameController = TextEditingController();
+  final TextEditingController assigneeController = TextEditingController();
 
   String frequency = "Hằng ngày";
   int points = 1;
@@ -18,6 +20,7 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
   @override
   void dispose() {
     taskNameController.dispose();
+    assigneeController.dispose();
     super.dispose();
   }
 
@@ -32,6 +35,10 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
       return;
     }
 
+    final assigneeName = assigneeController.text.trim().isEmpty 
+        ? 'Chưa phân công' 
+        : assigneeController.text.trim();
+
     final success = await choreService.addChore(
       houseId: houseId,
       title: taskNameController.text.trim().isEmpty
@@ -39,6 +46,8 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
           : taskNameController.text.trim(),
       assignedToUid: null, // chưa phân công; người bấm hoàn thành sẽ nhận điểm
       assignedToName: null,
+      assignedToUid: AuthService().currentFirebaseUser?.uid,
+      assignedToName: assigneeName,
       frequency: frequency,
       points: points,
     );
@@ -55,6 +64,7 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
             taskName: taskNameController.text,
             frequency: frequency,
             assignee: '—',
+            assignee: assigneeName,
           ),
         ),
       );
@@ -144,6 +154,35 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
                           value: "Hằng tháng", child: Text("Hằng tháng")),
                     ],
                     onChanged: (v) => setState(() => frequency = v!),
+                  ),
+
+                  const SizedBox(height: 18),
+
+                  const Text(
+                    "Chu kỳ lặp",
+                    "Người thực hiện",
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF2F2F4F),
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  DropdownButtonFormField<String>(
+                    value: frequency,
+                    decoration: _inputDecoration(""),
+                    items: const [
+                      DropdownMenuItem(
+                          value: "Hằng ngày", child: Text("Hằng ngày")),
+                      DropdownMenuItem(
+                          value: "Hằng tuần", child: Text("Hằng tuần")),
+                      DropdownMenuItem(
+                          value: "Hằng tháng", child: Text("Hằng tháng")),
+                    ],
+                    onChanged: (v) => setState(() => frequency = v!),
+                  TextField(
+                    controller: assigneeController,
+                    decoration: _inputDecoration("Minh An"),
                   ),
 
                   const SizedBox(height: 18),

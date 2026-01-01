@@ -57,7 +57,7 @@ class _DynamicHomeScreenState extends State<DynamicHomeScreen> {
     if (uid != null) {
       hasHouse = await houseService.hasHouse(uid);
       if (hasHouse) {
-        houseName = await houseService.getHouseName(uid);
+        houseName = await houseService.getHouseName(uid) ?? 'Nhà của bạn';
         houseCode = await houseService.getHouseCode(uid) ?? '';
         houseId = await houseService.getHouseId(uid);
       }
@@ -249,9 +249,6 @@ class _DynamicHomeScreenState extends State<DynamicHomeScreen> {
       ),
     );
   }
-
-  // ================= TAB CHORES =================
-
   // ================= WIDGETS CON =================
   Widget _buildHeader(String name, String houseName, String houseCode) {
     return Row(
@@ -509,5 +506,5 @@ class _DynamicHomeScreenState extends State<DynamicHomeScreen> {
     _shoppingStreamSub?.cancel();
     super.dispose();
   }
-
 }
+

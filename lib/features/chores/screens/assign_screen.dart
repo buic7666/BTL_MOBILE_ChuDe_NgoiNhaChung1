@@ -113,6 +113,22 @@ class _AssignScreenState extends State<AssignScreen> {
         final member = _members[memberIndex];
         assignedName = member['name']!;
         assignedUid = member['uid']!;
+        // Nếu chore đã có assignedToName (từ CreateTaskScreen), giữ nguyên
+        // Nếu chưa có, mới dùng quay vòng
+        String assignedName;
+        String assignedUid;
+        
+        if (chore.assignedToName != null && chore.assignedToName!.isNotEmpty && chore.assignedToName != 'Chưa phân công') {
+          // Giữ tên đã có
+          assignedName = chore.assignedToName!;
+          assignedUid = chore.assignedToUid ?? '';
+        } else {
+          // Quay vòng gán
+          final memberIndex = (weekIndex - 1 + i) % _members.length;
+          final member = _members[memberIndex];
+          assignedName = member['name']!;
+          assignedUid = member['uid']!;
+        }
 
         currentAssign[chore.title] = assignedName;
 

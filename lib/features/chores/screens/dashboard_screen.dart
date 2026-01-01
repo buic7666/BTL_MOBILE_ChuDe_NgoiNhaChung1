@@ -146,6 +146,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               const SizedBox(height: 16),
 
               /// ===== THỐNG KÊ TUẦN (REAL-TIME) =====
+              /// ===== THỐNG KÊ TUẦN =====
               GestureDetector(
                 onTap: () => Navigator.push(
                   context,
@@ -213,6 +214,53 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       ),
                     );
                   },
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 16, vertical: 14),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(18),
+                    boxShadow: const [
+                      BoxShadow(
+                        blurRadius: 10,
+                        offset: Offset(0, 4),
+                        color: Color(0x14000000),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        "Thống kê Tuần này",
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF2F2F4F),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: const [
+                          Expanded(
+                            child: _StatItem(
+                                title: "Việc nhà", value: "12"),
+                          ),
+                          _Divider(),
+                          Expanded(
+                            child:
+                                _StatItem(title: "Tới hạn", value: "3"),
+                          ),
+                          _Divider(),
+                          Expanded(
+                            child:
+                                _StatItem(title: "Điểm tháng", value: "48"),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               ),
 
@@ -286,6 +334,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         ),
                       );
                     },
+                  FeatureCard(
+                    icon: const Text("📝", style: TextStyle(fontSize: 28)),
+                    title: "Tạo Việc Nhà",
+                    desc: "Đã tạo: 12 task",
+                    progress: 0.75,
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const CreateTaskScreen(),
+                      ),
+                    ),
                   ),
                   FeatureCard(
                     icon: const Text("🔄", style: TextStyle(fontSize: 28)),
@@ -316,6 +375,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         ),
                       );
                     },
+                  FeatureCard(
+                    icon: const Text("✔️", style: TextStyle(fontSize: 28)),
+                    title: "Hoàn Thành",
+                    desc: "Đã hoàn thành: 6",
+                    progress: 0.6,
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const CompleteScreen(),
+                      ),
+                    ),
                   ),
                   FeatureCard(
                     icon: const Text("🏆", style: TextStyle(fontSize: 28)),

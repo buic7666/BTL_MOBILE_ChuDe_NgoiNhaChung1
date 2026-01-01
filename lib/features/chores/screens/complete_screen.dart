@@ -34,6 +34,12 @@ class _CompleteScreenState extends State<CompleteScreen> {
       chore: chore,
     );
 
+
+    final result = await ChoreService().toggleComplete(
+      houseId: _houseId!,
+      chore: chore,
+    );
+
     if (result['success'] == true && mounted) {
       final completed = result['completed'] as bool;
       if (completed) {
@@ -123,6 +129,7 @@ class _CompleteScreenState extends State<CompleteScreen> {
               child: Text('Không có việc cần làm'),
             );
           }
+          final chores = snapshot.data!;
 
           return ListView(
             padding: const EdgeInsets.all(16),

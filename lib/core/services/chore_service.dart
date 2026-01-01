@@ -68,6 +68,7 @@ class ChoreService {
   }) async {
     try {
         final docRef = _firestore
+      final docRef = _firestore
           .collection('houses')
           .doc(houseId)
           .collection('chores')
@@ -97,7 +98,6 @@ class ChoreService {
 
       String? awardedUserName;
       int? awardedPoints;
-
       // Cộng điểm nếu hoàn thành, chưa awarded
       // Người nhận điểm: uid (đã lấy ở trên). Nếu vẫn null => không cộng điểm.
       if (newCompleted && !chore.awarded && uid != null) {
@@ -124,6 +124,34 @@ class ChoreService {
         awardedPoints = chore.points;
         
         print('✓ Cộng ${chore.points} điểm cho: $awardedUserName');
+      // Cộng điểm nếu hoàn thành và chưa awarded
+      if (newCompleted && !chore.awarded) {
+        final uid = chore.assignedToUid ?? AuthService().currentFirebaseUser?.uid;
+        if (uid != null) {
+          final userRef = _firestore.collection('users').doc(uid);
+          
+          // Đảm bảo user document tồn tại, khởi tạo points = 0 nếu chưa có
+          final userDoc = await userRef.get();
+          if (!userDoc.exists) {
+            batch.set(userRef, {
+              'uid': uid,
+              'points': chore.points,
+              'createdAt': Timestamp.fromDate(DateTime.now()),
+              'updatedAt': Timestamp.fromDate(DateTime.now()),
+            });
+          } else {
+            batch.update(userRef, {
+              'points': FieldValue.increment(chore.points),
+              'updatedAt': Timestamp.fromDate(DateTime.now()),
+            });
+          }
+          
+          // Ưu tiên assignedToName từ chore, không lấy từ user login
+          awardedUserName = chore.assignedToName ?? 'Không xác định';
+          awardedPoints = chore.points;
+          
+          print('✓ Cộng ${chore.points} điểm cho: $awardedUserName');
+        }
       }
 
       await batch.commit();
@@ -140,7 +168,6 @@ class ChoreService {
       return {'success': false, 'error': e.toString()};
     }
   }
-
   /// Xóa một chore
   Future<bool> deleteChore({
     required String houseId,
@@ -190,7 +217,6 @@ class ChoreService {
       return false;
     }
   }
-
   /// Tiện ích: lấy `houseId` hiện tại của user
   Future<String?> currentUserHouseId() async {
       final uid = AuthService().currentFirebaseUser?.uid;

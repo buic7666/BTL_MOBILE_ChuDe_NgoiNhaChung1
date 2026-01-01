@@ -66,6 +66,41 @@ class _RankingScreenState extends State<RankingScreen> {
       if (mounted) {
         setState(() {
           ranking = filtered;
+    final houseId = await ChoreService().currentUserHouseId();
+    if (houseId == null) {
+      if (mounted) setState(() => _loading = false);
+      return;
+    }
+
+    try {
+      // Lấy tất cả chores đã hoàn thành + đã thưởng
+      final choresSnap = await FirebaseFirestore.instance
+          .collection('houses')
+          .doc(houseId)
+          .collection('chores')
+          .where('completed', isEqualTo: true)
+          .where('awarded', isEqualTo: true)
+          .get();
+
+      // Nhóm điểm theo assignedToName
+      final scoreMap = <String, int>{};
+      for (final doc in choresSnap.docs) {
+        final data = doc.data();
+        final assignedToName = data['assignedToName'] as String? ?? 'Không xác định';
+        final points = data['points'] as int? ?? 0;
+
+        scoreMap[assignedToName] = (scoreMap[assignedToName] ?? 0) + points;
+      }
+
+      // Chuyển thành list và sắp xếp
+      final rankingList = scoreMap.entries
+          .map((e) => {'name': e.key, 'point': e.value})
+          .toList();
+      rankingList.sort((a, b) => (b['point'] as int).compareTo(a['point'] as int));
+
+      if (mounted) {
+        setState(() {
+          ranking = rankingList;
           _loading = false;
         });
       }
