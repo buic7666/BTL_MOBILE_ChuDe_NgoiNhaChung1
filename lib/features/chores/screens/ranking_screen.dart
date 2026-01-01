@@ -1,18 +1,87 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import '../../../core/services/chore_service.dart';
 
-class RankingScreen extends StatelessWidget {
+class RankingScreen extends StatefulWidget {
   const RankingScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final ranking = [
-      {"name": "Hằng", "point": 62},
-      {"name": "An", "point": 48},
-      {"name": "Bình", "point": 36},
-      {"name": "Nam", "point": 22},
-    ];
+  State<RankingScreen> createState() => _RankingScreenState();
+}
 
-    final int maxPoint = ranking.first["point"] as int;
+class _RankingScreenState extends State<RankingScreen> {
+  List<Map<String, dynamic>> ranking = [];
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadRanking();
+  }
+
+  Future<void> _loadRanking() async {
+    try {
+      final houseId = await ChoreService().currentUserHouseId();
+      if (houseId == null) {
+        if (mounted) setState(() => _loading = false);
+        return;
+      }
+
+      // Lấy danh sách member từ house
+      final houseDoc = await FirebaseFirestore.instance
+          .collection('houses')
+          .doc(houseId)
+          .get();
+      final members = List<String>.from(houseDoc.data()?['members'] ?? []);
+      if (members.isEmpty) {
+        if (mounted) setState(() => _loading = false);
+        return;
+      }
+
+      // Firestore whereIn tối đa 10 phần tử -> chia lô
+      final List<Map<String, dynamic>> rankingList = [];
+      for (int i = 0; i < members.length; i += 10) {
+        final chunk = members.sublist(i, i + 10 > members.length ? members.length : i + 10);
+        final snap = await FirebaseFirestore.instance
+            .collection('users')
+            .where(FieldPath.documentId, whereIn: chunk)
+            .get();
+
+        for (final doc in snap.docs) {
+          final data = doc.data();
+          final nameField = data['name'] as String?;
+          final emailField = data['email'] as String?;
+          final name = (nameField?.isNotEmpty == true)
+              ? nameField!
+              : (emailField?.split('@').first ?? doc.id);
+          final points = data['points'] as int? ?? 0;
+          rankingList.add({'name': name, 'point': points});
+        }
+      }
+
+      // Chỉ hiển thị người có điểm > 0
+      final filtered = rankingList.where((e) => (e['point'] as int) > 0).toList();
+      filtered.sort((a, b) => (b['point'] as int).compareTo(a['point'] as int));
+
+      if (mounted) {
+        setState(() {
+          ranking = filtered;
+          _loading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _loading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Lỗi tải bảng xếp hạng: $e')),
+        );
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final int maxPoint = ranking.isNotEmpty ? (ranking.first["point"] as int) : 1;
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -29,16 +98,20 @@ class RankingScreen extends StatelessWidget {
         elevation: 0,
         iconTheme: const IconThemeData(color: Color(0xFF3D4AF3)),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            /// 🏆 Danh sách xếp hạng
-            ...ranking.asMap().entries.map((entry) {
-              final index = entry.key;
-              final user = entry.value;
-              final int point = user["point"] as int;
-              final double progress = point / maxPoint;
+      body: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : ranking.isEmpty
+              ? const Center(child: Text('Chưa có dữ liệu xếp hạng'))
+              : Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    children: [
+                      /// 🏆 Danh sách xếp hạng
+                      ...ranking.asMap().entries.map((entry) {
+                        final index = entry.key;
+                        final person = entry.value;
+                        final int point = person["point"] as int;
+                        final double progress = point / (maxPoint > 0 ? maxPoint : 1);
 
               return Container(
                 margin: const EdgeInsets.only(bottom: 14),
@@ -61,7 +134,7 @@ class RankingScreen extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          "#${index + 1} - ${user["name"]}",
+                          "#${index + 1} - ${person["name"]}",
                           style: const TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 16,
@@ -103,30 +176,31 @@ class RankingScreen extends StatelessWidget {
               );
             }).toList(),
 
-            const SizedBox(height: 12),
+                      const SizedBox(height: 12),
 
-            /// 🏅 Thành viên tích cực
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF6D6DF6), Color(0xFF8E7CF6)],
+                      /// 🏅 Thành viên tích cực
+                      if (ranking.isNotEmpty)
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFF6D6DF6), Color(0xFF8E7CF6)],
+                            ),
+                            borderRadius: BorderRadius.circular(18),
+                          ),
+                          child: Text(
+                            "🏆 Thành viên tích cực tháng: ${ranking.first['name']}",
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        )
+                    ],
+                  ),
                 ),
-                borderRadius: BorderRadius.circular(18),
-              ),
-              child: const Text(
-                "🏆 Thành viên tích cực tháng: Hằng",
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            )
-          ],
-        ),
-      ),
     );
   }
 

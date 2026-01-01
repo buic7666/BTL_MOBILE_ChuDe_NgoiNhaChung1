@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/services/chore_service.dart';
 import 'task_list_screen.dart';
 
 class CreateTaskScreen extends StatefulWidget {
@@ -12,7 +13,7 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
   final TextEditingController taskNameController = TextEditingController();
 
   String frequency = "Hằng ngày";
-  String assignee = "Minh An";
+  int points = 1;
 
   @override
   void dispose() {
@@ -20,13 +21,48 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
     super.dispose();
   }
 
-  void createTask() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => const TaskListScreen(),
-      ),
+  Future<void> createTask() async {
+    final choreService = ChoreService();
+    String? houseId = await choreService.currentUserHouseId();
+    if (houseId == null) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Chưa có nhà. Vui lòng tham gia/tạo nhà.')),
+      );
+      return;
+    }
+
+    final success = await choreService.addChore(
+      houseId: houseId,
+      title: taskNameController.text.trim().isEmpty
+          ? 'Chưa đặt tên'
+          : taskNameController.text.trim(),
+      assignedToUid: null, // chưa phân công; người bấm hoàn thành sẽ nhận điểm
+      assignedToName: null,
+      frequency: frequency,
+      points: points,
     );
+
+    if (!mounted) return;
+    if (success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('✓ Đã tạo việc: +$points điểm khi hoàn thành')),
+      );
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => TaskListScreen(
+            taskName: taskNameController.text,
+            frequency: frequency,
+            assignee: '—',
+          ),
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Tạo việc thất bại. Thử lại sau.')),
+      );
+    }
   }
 
   InputDecoration _inputDecoration(String hint) {
@@ -48,127 +84,157 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // ===== TITLE =====
-              const Center(
-                child: Text(
-                  "Tạo Việc Nhà",
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF2F5BFF),
-                  ),
-                ),
-              ),
+        child: Stack(
+          children: [
+            SingleChildScrollView(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 36),
 
-              const SizedBox(height: 28),
-
-              // ===== TÊN VIỆC =====
-              const Text(
-                "Tên việc:",
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF2F2F4F),
-                ),
-              ),
-              const SizedBox(height: 6),
-              TextField(
-                controller: taskNameController,
-                decoration: _inputDecoration("VD: Đổ rác"),
-              ),
-
-              const SizedBox(height: 18),
-
-              // ===== CHU KỲ =====
-              const Text(
-                "Chu kỳ lặp",
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF2F2F4F),
-                ),
-              ),
-              const SizedBox(height: 6),
-              DropdownButtonFormField<String>(
-                value: frequency,
-                decoration: _inputDecoration(""),
-                items: const [
-                  DropdownMenuItem(
-                      value: "Hằng ngày", child: Text("Hằng ngày")),
-                  DropdownMenuItem(
-                      value: "Hằng tuần", child: Text("Hằng tuần")),
-                  DropdownMenuItem(
-                      value: "Hằng tháng", child: Text("Hằng tháng")),
-                ],
-                onChanged: (v) => setState(() => frequency = v!),
-              ),
-
-              const SizedBox(height: 18),
-
-              // ===== NGƯỜI THỰC HIỆN =====
-              const Text(
-                "Người thực hiện",
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF2F2F4F),
-                ),
-              ),
-              const SizedBox(height: 6),
-              DropdownButtonFormField<String>(
-                value: assignee,
-                decoration: _inputDecoration(""),
-                items: const [
-                  DropdownMenuItem(
-                      value: "Minh An", child: Text("Minh An")),
-                  DropdownMenuItem(
-                      value: "Khánh Vy", child: Text("Khánh Vy")),
-                  DropdownMenuItem(
-                      value: "Hoàng Nam", child: Text("Hoàng Nam")),
-                ],
-                onChanged: (v) => setState(() => assignee = v!),
-              ),
-
-              const SizedBox(height: 30),
-
-              // ===== BUTTON =====
-              SizedBox(
-                width: double.infinity,
-                height: 50,
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFF5B6CFF), Color(0xFF8A7CFF)],
+                  const Center(
+                    child: Text(
+                      "Tạo Việc Nhà",
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF2F5BFF),
+                      ),
                     ),
-                    borderRadius: BorderRadius.circular(14),
                   ),
-                  child: ElevatedButton(
-                    onPressed: createTask,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.transparent,
-                      shadowColor: Colors.transparent,
-                      shape: RoundedRectangleBorder(
+
+                  const SizedBox(height: 28),
+
+                  const Text(
+                    "Tên việc:",
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF2F2F4F),
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  TextField(
+                    controller: taskNameController,
+                    decoration: _inputDecoration("VD: Đổ rác"),
+                  ),
+
+                  const SizedBox(height: 18),
+
+                  const Text(
+                    "Chu kỳ lặp",
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF2F2F4F),
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  DropdownButtonFormField<String>(
+                    value: frequency,
+                    decoration: _inputDecoration(""),
+                    items: const [
+                      DropdownMenuItem(
+                          value: "Hằng ngày", child: Text("Hằng ngày")),
+                      DropdownMenuItem(
+                          value: "Hằng tuần", child: Text("Hằng tuần")),
+                      DropdownMenuItem(
+                          value: "Hằng tháng", child: Text("Hằng tháng")),
+                    ],
+                    onChanged: (v) => setState(() => frequency = v!),
+                  ),
+
+                  const SizedBox(height: 18),
+
+                  const Text(
+                    "Điểm thưởng khi hoàn thành",
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF2F2F4F),
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  DropdownButtonFormField<int>(
+                    value: points,
+                    decoration: _inputDecoration(""),
+                    items: const [
+                      DropdownMenuItem(value: 1, child: Text("+1 điểm")),
+                      DropdownMenuItem(value: 3, child: Text("+3 điểm")),
+                      DropdownMenuItem(value: 5, child: Text("+5 điểm")),
+                    ],
+                    onChanged: (v) => setState(() => points = v ?? 1),
+                  ),
+
+                  const SizedBox(height: 30),
+
+                  SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [
+                            Color(0xFF5B6CFF),
+                            Color(0xFF8A7CFF)
+                          ],
+                        ),
                         borderRadius: BorderRadius.circular(14),
                       ),
-                    ),
-                    child: const Text(
-                      "Tạo việc nhà",
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
+                      child: ElevatedButton(
+                        onPressed: createTask,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.transparent,
+                          shadowColor: Colors.transparent,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                        ),
+                        child: const Text(
+                          "Tạo việc nhà",
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
                       ),
                     ),
                   ),
+                ],
+              ),
+            ),
+
+            Positioned(
+              top: 8,
+              left: 8,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(12),
+                onTap: () => Navigator.pop(context),
+                child: Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Color(0x22000000),
+                        blurRadius: 8,
+                        offset: Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: const Icon(
+                    Icons.arrow_back,
+                    color: Color(0xFF2F5BFF),
+                    size: 22,
+                  ),
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
