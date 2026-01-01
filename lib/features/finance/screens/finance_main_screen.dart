@@ -9,6 +9,7 @@ import '../widgets/filter_toggle.dart';
 import '../widgets/finance_header.dart';
 import '../widgets/transaction_item.dart';
 import 'add_expense_screen.dart';
+import 'expense_detail_screen.dart';
 import 'payment_screen.dart';
 import '../../../core/services/finance_service.dart';
 import '../../../core/services/auth_service.dart';
@@ -137,7 +138,22 @@ class _FinanceMainScreenState extends State<FinanceMainScreen> {
 
           if (result != null && _houseId != null) {
             // Lấy thông tin người trả
-            final payerId = result['payer'] as String? ?? _currentUserId ?? '';
+            final payerIdRaw = result['payer'] as String?;
+            if (payerIdRaw == null || payerIdRaw.isEmpty) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Không xác định được người trả'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+              return;
+            }
+            final payerId = payerIdRaw;
+
+            print(
+              '💰 AddExpense result: payer=$payerId, currentUser=$_currentUserId',
+            );
+
             final totalAmount = (result['amount'] as num?)?.toDouble() ?? 0.0;
             final title = result['title'] as String? ?? 'Chi phí chung';
             final date = result['date'] as DateTime? ?? DateTime.now();
@@ -510,49 +526,50 @@ class _FinanceMainScreenState extends State<FinanceMainScreen> {
 
         print('💳 Looking for: balances/$debtorId/debts/$payerId');
 
+        // Kiểm tra/tạo debt doc để theo dõi trạng thái xác nhận
         final debtSnap = await debtRef.get();
-        if (!debtSnap.exists) {
-          print(
-            '⚠️ Debt không tồn tại (có thể đã xóa). Bỏ qua để tránh gạch nhầm expense.',
-          );
-          // Không đánh dấu settled toàn bộ expense, tránh xóa nợ của người khác.
-          return;
+        Map<String, dynamic> debtData = {};
+
+        if (debtSnap.exists) {
+          debtData = debtSnap.data() as Map<String, dynamic>;
+        } else {
+          print('⚠️ Debt không tồn tại, tạo mới để theo dõi xác nhận');
+          debtData = {
+            'paidBy': false,
+            'confirmedBy': false,
+            'settlementDone': false,
+            'createdAt': FieldValue.serverTimestamp(),
+          };
         }
 
-        // Lấy snapshot hiện tại (đã tồn tại vì ở trên đã kiểm tra exists)
-
-        // Cập nhật flag tương ứng (cả hai chiều để sync giao diện)
+        // Cập nhật flag xác nhận tương ứng
         // paidBy: người cho vay (payerId) xác nhận đã trả
         // confirmedBy: người nợ (debtorId) xác nhận đã nhận
         final userId = _currentUserId;
-        final updateData = <String, dynamic>{'status': 'paying'};
         if (userId == payerId) {
-          updateData['paidBy'] = true;
-          updateData['paidAt'] = FieldValue.serverTimestamp();
+          debtData['paidBy'] = true;
+          debtData['paidAt'] = FieldValue.serverTimestamp();
         } else if (userId == debtorId) {
-          updateData['confirmedBy'] = true;
-          updateData['confirmedAt'] = FieldValue.serverTimestamp();
+          debtData['confirmedBy'] = true;
+          debtData['confirmedAt'] = FieldValue.serverTimestamp();
         }
 
         // Áp dụng cho cả debt và mirrorDebt để hai phía thấy cùng trạng thái
         await Future.wait([
-          debtRef.set(updateData, SetOptions(merge: true)),
-          mirrorDebtRef.set(updateData, SetOptions(merge: true)),
+          debtRef.set(debtData, SetOptions(merge: true)),
+          mirrorDebtRef.set(debtData, SetOptions(merge: true)),
         ]);
-        print('✅ Cập nhật cờ: $updateData');
+        print(
+          '✅ Cập nhật cờ xác nhận: paidBy=${debtData['paidBy']}, confirmedBy=${debtData['confirmedBy']}',
+        );
 
         // Kiểm tra trạng thái xác nhận
-        final updatedSnap = await debtRef.get();
-        final updatedData = updatedSnap.data() as Map<String, dynamic>;
         final bothConfirmed =
-            updatedData['paidBy'] == true && updatedData['confirmedBy'] == true;
-        final oneSideConfirmed =
-            updatedData['paidBy'] == true || updatedData['confirmedBy'] == true;
-        final settlementDone = updatedData['settlementDone'] == true;
+            debtData['paidBy'] == true && debtData['confirmedBy'] == true;
+        final settlementDone = debtData['settlementDone'] == true;
 
-        print('🔄 Updated debt: $updatedData');
         print(
-          '🔄 oneSideConfirmed=$oneSideConfirmed, bothConfirmed=$bothConfirmed (paidBy=${updatedData['paidBy']}, confirmedBy=${updatedData['confirmedBy']})',
+          '🔄 bothConfirmed=$bothConfirmed, settlementDone=$settlementDone',
         );
 
         // Helper: thực hiện trừ tiền + gạch settledPairs một lần (idempotent bằng settlementDone)
@@ -582,7 +599,8 @@ class _FinanceMainScreenState extends State<FinanceMainScreen> {
             print('    splits keys: ${splits.keys.toList()}');
             print('    debtorId=$debtorId, payerId=$payerId');
 
-            // Tìm expense liên quan: cùng cặp payer-debtor và còn dư nợ chưa settled
+            // Tìm expense liên quan đến cặp payerId-debtorId (cả hai chiều)
+            // Khi thanh toán net balance, cần gạch TẤT CẢ expense của cặp này
             double pairAmount = 0.0;
             if (expensePayer == payerId && splits.containsKey(debtorId)) {
               final debtorSplit = splits[debtorId];
@@ -605,16 +623,10 @@ class _FinanceMainScreenState extends State<FinanceMainScreen> {
                 (expenseData['settledPairs'] as Map<String, dynamic>?) ?? {};
             if (settledPairs.containsKey(sortedPairKey)) continue;
 
-            // Chỉ mark nếu vẫn còn tiền phải gạch và cỡ tiền không vượt phần còn lại
-            if (remainingToSettle + 0.01 < pairAmount) {
-              print(
-                '    ⚠️ Bỏ qua expense ${expenseDoc.id} vì còn lại $remainingToSettle < split $pairAmount',
-              );
-              continue;
-            }
-
+            // Gạch TẤT CẢ expense của cặp này, bất kể amount
+            // (vì net balance đã tính bù trừ, thanh toán net là thanh toán toàn bộ)
             print(
-              '    🎯 MATCH FOUND! Gạch cặp $sortedPairKey với split=$pairAmount, remaining trước=$remainingToSettle',
+              '    🎯 MATCH! Gạch cặp $sortedPairKey trong expense ${expenseDoc.id} (split=$pairAmount)',
             );
 
             settledPairs[sortedPairKey] = {
@@ -626,45 +638,14 @@ class _FinanceMainScreenState extends State<FinanceMainScreen> {
             remainingToSettle -= pairAmount;
             print('    ✔️ remaining còn lại: $remainingToSettle');
 
-            if (remainingToSettle <= 0.01) {
-              print('    ✅ Đã gạch đủ số tiền cần thiết');
-              break;
-            }
+            // Tiếp tục gạch các expense khác của cặp này (không break sớm)
           }
 
           print(
             '💚 Đã đánh dấu settledPairs cho $matchedCount expense(s), còn lại chưa gạch: $remainingToSettle',
           );
 
-          // Giảm đúng số tiền đã thanh toán; nếu hết nợ thì mark settled (không xóa doc để khỏi tạo lại)
-          Future<void> _decreaseDebt(DocumentReference ref) async {
-            final snap = await ref.get();
-            if (!snap.exists) return;
-            final data = snap.data() as Map<String, dynamic>?;
-            final current = (data?['amount'] as num?)?.toDouble() ?? 0.0;
-            final remaining = current - amountValue;
-            if (remaining <= 0.01) {
-              await ref.set({
-                'amount': 0.0,
-                'status': 'settled',
-                'settlementDone': true,
-                'updatedAt': FieldValue.serverTimestamp(),
-              }, SetOptions(merge: true));
-              return;
-            }
-            await ref.set({
-              'amount': remaining,
-              'updatedAt': FieldValue.serverTimestamp(),
-            }, SetOptions(merge: true));
-          }
-
-          print('💚 Giảm nợ tại: ${debtRef.path} và ${mirrorDebtRef.path}');
-          await Future.wait([
-            _decreaseDebt(debtRef),
-            _decreaseDebt(mirrorDebtRef),
-          ]);
-          print('💚 ✅ Đã trừ số tiền đã trả khỏi debt');
-
+          // Log payment để audit
           await FirebaseFirestore.instance
               .collection('houses')
               .doc(_houseId)
@@ -676,8 +657,7 @@ class _FinanceMainScreenState extends State<FinanceMainScreen> {
                 'createdAt': FieldValue.serverTimestamp(),
               });
 
-          // Chờ stream listener cập nhật (có delay ~100ms)
-          // Nếu chờ quá lâu, setState sẽ rebuild với dữ liệu mới
+          // Chờ stream listener cập nhật từ expenses
           if (mounted) {
             await Future.delayed(const Duration(milliseconds: 200));
             setState(() {});
@@ -740,7 +720,7 @@ class _FinanceMainScreenState extends State<FinanceMainScreen> {
     final members = _memberIds;
 
     if (splitMode.contains('percent')) {
-      // CHIA %: người được % trả phần %, còn lại chia đều (bao gồm cả payer)
+      // CHIA %: một người chịu % riêng, phần còn lại chia đều cho những người khác (không gồm payer)
       final percent = (splitDetails?['percent'] ?? 0) as num;
       final percentMemberId = splitDetails?['memberId'] as String?;
 
@@ -748,8 +728,10 @@ class _FinanceMainScreenState extends State<FinanceMainScreen> {
         final pctAmount = totalAmount * percent / 100;
         final remainingAmount = totalAmount - pctAmount;
 
-        // Tất cả members (trừ người %) chia phần còn lại
-        final others = members.where((id) => id != percentMemberId).toList();
+        // Danh sách còn lại để chia phần còn lại (không gồm payer và người % nếu họ là payer)
+        final others = members
+            .where((id) => id != payerId && id != percentMemberId)
+            .toList();
         final perOther = others.isNotEmpty
             ? remainingAmount / others.length
             : 0.0;
@@ -757,9 +739,11 @@ class _FinanceMainScreenState extends State<FinanceMainScreen> {
         for (final memberId in members) {
           if (memberId == payerId) continue; // người trả không nợ chính mình
 
-          if (memberId == percentMemberId) {
+          if (memberId == percentMemberId && percentMemberId != payerId) {
+            // Người được % (khác payer) chịu phần % riêng
             splits[memberId] = pctAmount;
           } else {
+            // Các thành viên còn lại chịu phần chia đều của phần còn lại
             splits[memberId] = perOther;
           }
         }
@@ -827,7 +811,7 @@ class _FinanceMainScreenState extends State<FinanceMainScreen> {
             title: e['title'] as String? ?? 'Chi phí chung',
             subtitle: _buildExpenseSubtitle(e, dateFormatter),
             amount: formatter.format((amount ?? 0).toDouble()),
-            onTap: () => _showExpenseDetails(e),
+            onTap: () => _openExpenseDetail(e),
           ),
         );
       }).toList(),
@@ -849,12 +833,20 @@ class _FinanceMainScreenState extends State<FinanceMainScreen> {
     final payerId = (e['payer'] ?? e['paidBy'] ?? '').toString();
     final payerName = _getUserDisplayName(payerId);
 
+    final splits = (e['splits'] as Map<String, dynamic>?) ?? {};
+    final splitCount = splits.length;
+    final sumSplits = splits.values
+        .map((v) => (v as num?)?.toDouble() ?? 0.0)
+        .fold<double>(0.0, (a, b) => a + b);
+
     final participantsData = e['participants'];
     final selectedMembers = (e['selectedMembers'] as List?)?.cast<String>();
     final splitMode = e['splitMode']?.toString() ?? '';
 
     int numParticipants = 0;
-    if (selectedMembers != null && selectedMembers.isNotEmpty) {
+    if (splitCount > 0) {
+      numParticipants = splitCount;
+    } else if (selectedMembers != null && selectedMembers.isNotEmpty) {
       numParticipants = selectedMembers.length;
     } else if (participantsData is Map) {
       numParticipants = participantsData.values.where((v) => v == true).length;
@@ -862,369 +854,63 @@ class _FinanceMainScreenState extends State<FinanceMainScreen> {
       numParticipants = participantsData.length;
     }
 
-    // Loại người trả khỏi số người chia nếu đang đếm tất cả participants
-    if (numParticipants > 0) {
+    // Loại người trả khỏi số người chia nếu đang đếm tất cả participants (chỉ áp dụng khi chưa có splits cụ thể)
+    if (splitCount == 0 && numParticipants > 0) {
       if (splitMode.contains('percent') || splitMode.contains('equal')) {
         numParticipants = ((numParticipants - 1).clamp(
           0,
           numParticipants,
         )).toInt();
-
-        Future<void> _showExpenseDetails(Map<String, dynamic> e) async {
-          // Ưu tiên đọc lại expense theo id để hiển thị đúng dữ liệu thực tế
-          Map<String, dynamic> expense = Map<String, dynamic>.from(e);
-          final expenseId = e['id'] as String?;
-          if (_houseId != null && expenseId != null) {
-            final snap = await FirebaseFirestore.instance
-                .collection('houses')
-                .doc(_houseId)
-                .collection('expenses')
-                .doc(expenseId)
-                .get();
-            if (snap.exists) {
-              expense = {
-                ...snap.data() as Map<String, dynamic>,
-                'id': expenseId,
-              };
-              final ts = expense['date'];
-              if (ts is Timestamp) expense['date'] = ts.toDate();
-            }
-          }
-
-          final nf = NumberFormat.currency(locale: 'vi_VN', symbol: 'đ');
-          final title = (expense['title'] as String?)?.trim().isNotEmpty == true
-              ? (expense['title'] as String)
-              : 'Chi phí chung';
-          final payerId = (expense['payer'] ?? expense['paidBy'] ?? '')
-              .toString();
-          final payerName = _getUserDisplayName(payerId);
-          final date = expense['date'] is DateTime
-              ? expense['date'] as DateTime
-              : null;
-          final total =
-              ((expense['totalAmount'] ?? expense['amount']) as num?)
-                  ?.toDouble() ??
-              0.0;
-          final splits = (expense['splits'] as Map<String, dynamic>?) ?? {};
-
-          if (!mounted) return;
-
-          showModalBottomSheet(
-            context: context,
-            isScrollControlled: true,
-            shape: const RoundedRectangleBorder(
-              borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-            ),
-            builder: (_) {
-              return Padding(
-                padding: EdgeInsets.only(
-                  left: 16,
-                  right: 16,
-                  top: 16,
-                  bottom: MediaQuery.of(context).viewInsets.bottom + 24,
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Center(
-                      child: Container(
-                        width: 40,
-                        height: 4,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFE5E7EB),
-                          borderRadius: BorderRadius.circular(99),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      title,
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w700,
-                        color: Color(0xFF111827),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Người trả: $payerName',
-                      style: const TextStyle(
-                        fontSize: 14,
-                        color: Color(0xFF4B5563),
-                      ),
-                    ),
-                    if (date != null) ...[
-                      const SizedBox(height: 4),
-                      Text(
-                        'Ngày: ${DateFormat('dd/MM/yyyy').format(date)}',
-                        style: const TextStyle(
-                          fontSize: 14,
-                          color: Color(0xFF4B5563),
-                        ),
-                      ),
-                    ],
-                    const SizedBox(height: 12),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text(
-                          'Tổng cộng',
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w600,
-                            color: Color(0xFF111827),
-                          ),
-                        ),
-                        Text(
-                          nf.format(total),
-                          style: const TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w700,
-                            color: Color(0xFF111827),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    const Text(
-                      'Chi tiết chia',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF111827),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    ...splits.entries.map((entry) {
-                      final uid = entry.key.toString();
-                      final name = _getUserDisplayName(uid);
-                      final value = (entry.value as num?)?.toDouble() ?? 0.0;
-                      return Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 4),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              name,
-                              style: const TextStyle(
-                                fontSize: 14,
-                                color: Color(0xFF4B5563),
-                              ),
-                            ),
-                            Text(
-                              nf.format(value),
-                              style: const TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                                color: Color(0xFF1F2937),
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
-                    }).toList(),
-                    const SizedBox(height: 12),
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: () => Navigator.pop(context),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF6B5CFF),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          elevation: 0,
-                        ),
-                        child: const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 14),
-                          child: Text(
-                            'Đóng',
-                            style: TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            },
-          );
-        }
       }
     }
 
     final totalAmount =
         ((e['totalAmount'] ?? e['amount']) as num?)?.toDouble() ?? 0.0;
-    final splitAmount = numParticipants > 0
-        ? totalAmount / numParticipants
-        : 0.0;
     final nf = NumberFormat.currency(locale: 'vi_VN', symbol: 'đ');
 
-    final splitDesc = numParticipants > 0
-        ? '💰 $payerName trả · 👥 Chia $numParticipants người (${nf.format(splitAmount)}/người)'
+    double perPerson;
+    int displayCount;
+    if (splitCount > 0) {
+      perPerson = splitCount > 0 ? sumSplits / splitCount : 0.0;
+      displayCount = splitCount;
+    } else {
+      perPerson = numParticipants > 0 ? totalAmount / numParticipants : 0.0;
+      displayCount = numParticipants;
+    }
+
+    final splitDesc = displayCount > 0
+        ? '💰 $payerName trả · 👥 Chia $displayCount người (${nf.format(perPerson)}/người)'
         : '💰 $payerName trả';
 
     return dateStr.isNotEmpty ? '$splitDesc · 📅 $dateStr' : splitDesc;
   }
 
-  void _showExpenseDetails(Map<String, dynamic> e) {
-    final nf = NumberFormat.currency(locale: 'vi_VN', symbol: 'đ');
-    final title = (e['title'] as String?)?.trim().isNotEmpty == true
-        ? (e['title'] as String)
-        : 'Chi phí chung';
-    final payerId = (e['payer'] ?? e['paidBy'] ?? '').toString();
-    final payerName = _getUserDisplayName(payerId);
-    final date = e['date'] is DateTime ? e['date'] as DateTime : null;
-    final total =
-        ((e['totalAmount'] ?? e['amount']) as num?)?.toDouble() ?? 0.0;
-    final splits = (e['splits'] as Map<String, dynamic>?) ?? {};
+  void _openExpenseDetail(Map<String, dynamic> e) {
+    final expenseId = e['id'] as String?;
+    if (_houseId == null || expenseId == null) return;
 
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+    final participantNames = <String, String>{};
+    final splits = e['splits'] as Map<String, dynamic>? ?? {};
+    for (final uid in splits.keys) {
+      participantNames[uid] = _getUserDisplayName(uid);
+    }
+
+    final payerId = (e['payer'] ?? e['paidBy'] ?? '').toString();
+    final enrichedExpense = {
+      ...e,
+      'participantNames': participantNames,
+      'payerName': _getUserDisplayName(payerId),
+    };
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ExpenseDetailScreen(
+          houseId: _houseId!,
+          expenseId: expenseId,
+          initialExpense: enrichedExpense,
+        ),
       ),
-      builder: (_) {
-        return Padding(
-          padding: EdgeInsets.only(
-            left: 16,
-            right: 16,
-            top: 16,
-            bottom: MediaQuery.of(context).viewInsets.bottom + 24,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFE5E7EB),
-                    borderRadius: BorderRadius.circular(99),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
-                  color: Color(0xFF111827),
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Người trả: $payerName',
-                style: const TextStyle(fontSize: 14, color: Color(0xFF4B5563)),
-              ),
-              if (date != null) ...[
-                const SizedBox(height: 4),
-                Text(
-                  'Ngày: ${DateFormat('dd/MM/yyyy').format(date)}',
-                  style: const TextStyle(
-                    fontSize: 14,
-                    color: Color(0xFF4B5563),
-                  ),
-                ),
-              ],
-              const SizedBox(height: 12),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    'Tổng cộng',
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF111827),
-                    ),
-                  ),
-                  Text(
-                    nf.format(total),
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
-                      color: Color(0xFF111827),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              const Text(
-                'Chi tiết chia',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF111827),
-                ),
-              ),
-              const SizedBox(height: 8),
-              ...splits.entries.map((entry) {
-                final uid = entry.key.toString();
-                final name = _getUserDisplayName(uid);
-                final value = (entry.value as num?)?.toDouble() ?? 0.0;
-                return Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 4),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        name,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          color: Color(0xFF4B5563),
-                        ),
-                      ),
-                      Text(
-                        nf.format(value),
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: Color(0xFF1F2937),
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              }).toList(),
-              const SizedBox(height: 12),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () => Navigator.pop(context),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF6B5CFF),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    elevation: 0,
-                  ),
-                  child: const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 14),
-                    child: Text(
-                      'Đóng',
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        );
-      },
     );
   }
 

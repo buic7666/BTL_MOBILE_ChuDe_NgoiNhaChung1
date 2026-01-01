@@ -682,7 +682,13 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
         ),
       ),
     );
-    if (idx != null) setState(() => _selectedPayerIndex = idx);
+    if (idx != null) {
+      setState(() {
+        _selectedPayerIndex = idx;
+        // Khi đổi người trả, tự động đặt người chia % = người trả
+        _percentMemberIndex = idx;
+      });
+    }
   }
 
   void _showPercentMemberPicker() async {
@@ -731,10 +737,17 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
   // --- HÀM XỬ LÝ DỮ LIỆU ĐẦU RA (GIỮ NGUYÊN BẢN GỐC CỦA BẠN) ---
   // Quan trọng: Hàm này đảm bảo dữ liệu trả về giống hệt code cũ để không lỗi tính toán
   void _onAddPressed() {
+    final payerMember = _members[_selectedPayerIndex];
+    final payerId = payerMember['id'] as String;
+
+    print(
+      '📋 AddExpense: payer index=$_selectedPayerIndex, payerId=$payerId, name=${payerMember['name']}',
+    );
+
     final expense = {
       'amount': _parsedAmount,
       'title': _titleController.text,
-      'payer': _members[_selectedPayerIndex]['id'],
+      'payer': payerId,
       'splitMode': _splitMode.toString(),
       'splitDetails': _splitMode == SplitMode.percent
           ? {

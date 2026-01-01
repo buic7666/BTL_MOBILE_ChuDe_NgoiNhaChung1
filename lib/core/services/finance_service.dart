@@ -132,10 +132,18 @@ class FinanceService {
     final data = d.data();
     final out = Map<String, dynamic>.from(data);
     out['id'] = d.id; // keep Firestore id for detail lookups
-    final t = data['createdAt'];
-    if (t is Timestamp) {
-      out['date'] = t.toDate();
+
+    // Convert Timestamps to DateTime
+    final createdAt = data['createdAt'];
+    if (createdAt is Timestamp) {
+      out['date'] = createdAt.toDate();
     }
+
+    final dateField = data['date'];
+    if (dateField is Timestamp) {
+      out['date'] = dateField.toDate();
+    }
+
     return out;
   }
 
