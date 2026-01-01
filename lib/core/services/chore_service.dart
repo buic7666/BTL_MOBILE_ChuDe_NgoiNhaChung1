@@ -67,11 +67,20 @@ class ChoreService {
     required Chore chore,
   }) async {
     try {
+        final docRef = _firestore
       final docRef = _firestore
           .collection('houses')
           .doc(houseId)
           .collection('chores')
           .doc(chore.id);
+
+        // Người nhận điểm: ưu tiên assignedToUid, fallback người đang bấm
+        final currentUser = AuthService().currentFirebaseUser;
+        final uid = chore.assignedToUid ?? currentUser?.uid;
+        final displayName = chore.assignedToName ??
+          (currentUser?.displayName?.trim().isNotEmpty == true
+            ? currentUser!.displayName!
+            : (currentUser?.email?.split('@').first ?? 'Không xác định'));
 
       final newCompleted = !chore.isCompleted;
       final batch = _firestore.batch();
@@ -80,11 +89,41 @@ class ChoreService {
         'updatedAt': Timestamp.fromDate(DateTime.now()),
         // nếu đánh dấu hoàn thành, set awarded true để tránh cộng điểm lặp
         if (newCompleted) 'awarded': true,
+        // Nếu chưa có người được gán, lưu lại người bấm hoàn thành
+        if (newCompleted && chore.assignedToUid == null && uid != null)
+          'assignedToUid': uid,
+        if (newCompleted && chore.assignedToUid == null && uid != null)
+          'assignedToName': displayName,
       });
 
       String? awardedUserName;
       int? awardedPoints;
-
+      // Cộng điểm nếu hoàn thành, chưa awarded
+      // Người nhận điểm: uid (đã lấy ở trên). Nếu vẫn null => không cộng điểm.
+      if (newCompleted && !chore.awarded && uid != null) {
+        final userRef = _firestore.collection('users').doc(uid);
+        
+        // Đảm bảo user document tồn tại, khởi tạo points = 0 nếu chưa có
+        final userDoc = await userRef.get();
+        if (!userDoc.exists) {
+          batch.set(userRef, {
+            'uid': uid,
+            'points': chore.points,
+            'createdAt': Timestamp.fromDate(DateTime.now()),
+            'updatedAt': Timestamp.fromDate(DateTime.now()),
+          });
+        } else {
+          batch.update(userRef, {
+            'points': FieldValue.increment(chore.points),
+            'updatedAt': Timestamp.fromDate(DateTime.now()),
+          });
+        }
+        
+        // Ưu tiên assignedToName từ chore, nếu không có thì lấy displayName/email
+        awardedUserName = displayName;
+        awardedPoints = chore.points;
+        
+        print('✓ Cộng ${chore.points} điểm cho: $awardedUserName');
       // Cộng điểm nếu hoàn thành và chưa awarded
       if (newCompleted && !chore.awarded) {
         final uid = chore.assignedToUid ?? AuthService().currentFirebaseUser?.uid;
@@ -129,7 +168,55 @@ class ChoreService {
       return {'success': false, 'error': e.toString()};
     }
   }
+  /// Xóa một chore
+  Future<bool> deleteChore({
+    required String houseId,
+    required String choreId,
+  }) async {
+    try {
+      await _firestore
+          .collection('houses')
+          .doc(houseId)
+          .collection('chores')
+          .doc(choreId)
+          .delete();
+      print('Chore $choreId deleted');
+      return true;
+    } catch (e) {
+      print('deleteChore error: $e');
+      return false;
+    }
+  }
 
+  /// Cập nhật một chore
+  Future<bool> updateChore({
+    required String houseId,
+    required String choreId,
+    required String title,
+    String? assignedToName,
+    String? frequency,
+    int points = 1,
+  }) async {
+    try {
+      await _firestore
+          .collection('houses')
+          .doc(houseId)
+          .collection('chores')
+          .doc(choreId)
+          .update({
+        'title': title,
+        'assignedToName': assignedToName,
+        'frequency': frequency,
+        'points': points,
+        'updatedAt': Timestamp.fromDate(DateTime.now()),
+      });
+      print('Chore $choreId updated');
+      return true;
+    } catch (e) {
+      print('updateChore error: $e');
+      return false;
+    }
+  }
   /// Tiện ích: lấy `houseId` hiện tại của user
   Future<String?> currentUserHouseId() async {
       final uid = AuthService().currentFirebaseUser?.uid;

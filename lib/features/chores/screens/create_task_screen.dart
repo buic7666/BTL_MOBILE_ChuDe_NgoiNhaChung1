@@ -44,6 +44,8 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
       title: taskNameController.text.trim().isEmpty
           ? 'Chưa đặt tên'
           : taskNameController.text.trim(),
+      assignedToUid: null, // chưa phân công; người bấm hoàn thành sẽ nhận điểm
+      assignedToName: null,
       assignedToUid: AuthService().currentFirebaseUser?.uid,
       assignedToName: assigneeName,
       frequency: frequency,
@@ -61,6 +63,7 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
           builder: (_) => TaskListScreen(
             taskName: taskNameController.text,
             frequency: frequency,
+            assignee: '—',
             assignee: assigneeName,
           ),
         ),
@@ -156,6 +159,7 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
                   const SizedBox(height: 18),
 
                   const Text(
+                    "Chu kỳ lặp",
                     "Người thực hiện",
                     style: TextStyle(
                       fontSize: 14,
@@ -164,6 +168,18 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
                     ),
                   ),
                   const SizedBox(height: 6),
+                  DropdownButtonFormField<String>(
+                    value: frequency,
+                    decoration: _inputDecoration(""),
+                    items: const [
+                      DropdownMenuItem(
+                          value: "Hằng ngày", child: Text("Hằng ngày")),
+                      DropdownMenuItem(
+                          value: "Hằng tuần", child: Text("Hằng tuần")),
+                      DropdownMenuItem(
+                          value: "Hằng tháng", child: Text("Hằng tháng")),
+                    ],
+                    onChanged: (v) => setState(() => frequency = v!),
                   TextField(
                     controller: assigneeController,
                     decoration: _inputDecoration("Minh An"),

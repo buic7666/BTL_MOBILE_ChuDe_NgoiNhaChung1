@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../core/services/chore_service.dart';
 import '../models/chore.dart';
-
+class TaskListScreen extends StatefulWidget {
 class TaskListScreen extends StatelessWidget {
   final String taskName;
   final String frequency;
@@ -13,6 +13,135 @@ class TaskListScreen extends StatelessWidget {
     required this.frequency,
     required this.assignee,
   });
+
+  @override
+  State<TaskListScreen> createState() => _TaskListScreenState();
+}
+
+class _TaskListScreenState extends State<TaskListScreen> {
+
+  void _showDeleteDialog(BuildContext context, String houseId, Chore chore) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Xóa công việc?'),
+        content: Text('Bạn có chắc muốn xóa "${chore.title}" không?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Hủy'),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(ctx);
+              final success = await ChoreService().deleteChore(
+                houseId: houseId,
+                choreId: chore.id,
+              );
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(success ? '✓ Đã xóa công việc' : 'Xóa thất bại'),
+                    backgroundColor: success ? Colors.green : Colors.red,
+                  ),
+                );
+              }
+            },
+            child: const Text('Xóa', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showEditDialog(BuildContext context, String houseId, Chore chore) {
+    final titleCtrl = TextEditingController(text: chore.title);
+    final nameCtrl = TextEditingController(text: chore.assignedToName ?? '');
+    String frequency = chore.frequency ?? 'Hằng ngày';
+    int points = chore.points;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Sửa công việc'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: titleCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'Tên công việc',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: nameCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'Người thực hiện',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<String>(
+                value: frequency,
+                decoration: const InputDecoration(
+                  labelText: 'Chu kỳ',
+                  border: OutlineInputBorder(),
+                ),
+                items: const [
+                  DropdownMenuItem(value: 'Hằng ngày', child: Text('Hằng ngày')),
+                  DropdownMenuItem(value: 'Hằng tuần', child: Text('Hằng tuần')),
+                  DropdownMenuItem(value: 'Hằng tháng', child: Text('Hằng tháng')),
+                ],
+                onChanged: (val) => frequency = val ?? 'Hằng ngày',
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: 'Điểm thưởng',
+                  border: OutlineInputBorder(),
+                ),
+                onChanged: (val) => points = int.tryParse(val) ?? 1,
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Hủy'),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(ctx);
+              final success = await ChoreService().updateChore(
+                houseId: houseId,
+                choreId: chore.id,
+                title: titleCtrl.text.trim(),
+                assignedToName: nameCtrl.text.trim(),
+                frequency: frequency,
+                points: points,
+              );
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(success ? '✓ Đã cập nhật' : 'Cập nhật thất bại'),
+                    backgroundColor: success ? Colors.green : Colors.red,
+                  ),
+                );
+              }
+              titleCtrl.dispose();
+              nameCtrl.dispose();
+            },
+            child: const Text('Lưu'),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -117,6 +246,37 @@ class TaskListScreen extends StatelessWidget {
                                         ),
                                       ],
                                     ),
+                                  ),
+                                  PopupMenuButton<String>(
+                                    onSelected: (value) {
+                                      if (value == 'delete') {
+                                        _showDeleteDialog(context, hid, c);
+                                      } else if (value == 'edit') {
+                                        _showEditDialog(context, hid, c);
+                                      }
+                                    },
+                                    itemBuilder: (BuildContext context) => [
+                                      const PopupMenuItem<String>(
+                                        value: 'edit',
+                                        child: Row(
+                                          children: [
+                                            Icon(Icons.edit, size: 18),
+                                            SizedBox(width: 8),
+                                            Text('Sửa'),
+                                          ],
+                                        ),
+                                      ),
+                                      const PopupMenuItem<String>(
+                                        value: 'delete',
+                                        child: Row(
+                                          children: [
+                                            Icon(Icons.delete, size: 18, color: Colors.red),
+                                            SizedBox(width: 8),
+                                            Text('Xóa', style: TextStyle(color: Colors.red)),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ],
                               ),

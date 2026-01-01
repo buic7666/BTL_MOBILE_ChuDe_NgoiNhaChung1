@@ -104,6 +104,15 @@ class _AssignScreenState extends State<AssignScreen> {
       for (int i = 0; i < _chores.length; i++) {
         final chore = _chores[i];
         
+        // Quay vòng gán cho tất cả chores - không giữ nguyên
+        String assignedName;
+        String assignedUid;
+        
+        // Tính toán index thành viên dựa trên weekIndex
+        final memberIndex = (weekIndex - 1 + i) % _members.length;
+        final member = _members[memberIndex];
+        assignedName = member['name']!;
+        assignedUid = member['uid']!;
         // Nếu chore đã có assignedToName (từ CreateTaskScreen), giữ nguyên
         // Nếu chưa có, mới dùng quay vòng
         String assignedName;

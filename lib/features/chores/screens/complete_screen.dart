@@ -3,7 +3,9 @@ import '../../../core/services/chore_service.dart';
 import '../models/chore.dart';
 
 class CompleteScreen extends StatefulWidget {
-  const CompleteScreen({super.key});
+  const CompleteScreen({super.key, this.showPendingOnly = false});
+
+  final bool showPendingOnly;
 
   @override
   State<CompleteScreen> createState() => _CompleteScreenState();
@@ -26,6 +28,12 @@ class _CompleteScreenState extends State<CompleteScreen> {
 
   Future<void> _completeChore(Chore chore) async {
     if (_houseId == null) return;
+
+    final result = await ChoreService().toggleComplete(
+      houseId: _houseId!,
+      chore: chore,
+    );
+
 
     final result = await ChoreService().toggleComplete(
       houseId: _houseId!,
@@ -87,9 +95,9 @@ class _CompleteScreenState extends State<CompleteScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F6FA),
       appBar: AppBar(
-        title: const Text(
-          "Xác nhận hoàn thành",
-          style: TextStyle(
+        title: Text(
+          widget.showPendingOnly ? "Việc chưa xong" : "Xác nhận hoàn thành",
+          style: const TextStyle(
             color: Color(0xFF3D4AF3),
             fontWeight: FontWeight.bold,
           ),
@@ -112,6 +120,15 @@ class _CompleteScreenState extends State<CompleteScreen> {
             );
           }
 
+          final chores = widget.showPendingOnly
+              ? snapshot.data!.where((c) => !c.isCompleted).toList()
+              : snapshot.data!;
+
+          if (chores.isEmpty) {
+            return const Center(
+              child: Text('Không có việc cần làm'),
+            );
+          }
           final chores = snapshot.data!;
 
           return ListView(
