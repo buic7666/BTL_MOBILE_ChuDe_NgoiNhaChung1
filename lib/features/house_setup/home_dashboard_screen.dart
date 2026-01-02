@@ -5,15 +5,15 @@ import '../../constants/app_colors.dart';
 import '../chores/screens/dashboard_screen.dart';
 import '../chores/screens/complete_screen.dart';
 import '../bulletin/screens/house_bulletin_screen.dart';
-import '../finance/screens/finance_main_screen.dart';
-=======
 import '../bulletin/screens/shopping_list_screen.dart';
-import '../finance/finance_main_screen.dart';
+import '../finance/screens/finance_main_screen.dart';
 import '../../core/services/auth_service.dart';
 import '../../core/services/house_service.dart';
 import '../../core/services/bulletin_service.dart';
-import 'home_screen.dart';
 import '../../core/services/chore_service.dart';
+import '../../core/services/finance_service.dart';
+import '../finance/models/finance_logic.dart';
+import 'home_screen.dart';
 import '../chores/models/chore.dart';
 
 class DynamicHomeScreen extends StatefulWidget {
@@ -31,11 +31,22 @@ class _DynamicHomeScreenState extends State<DynamicHomeScreen> {
   String _houseName = '';
   String _houseCode = '';
   String? _houseId;
+  String? _currentUserId;
   double _myDebt = 0;
   double _othersOweMe = 0;
   int _shoppingItemCount = 0; // số món chưa hoàn thành
+  bool _hasChoreToday = false;
+  String _currentChore = 'Không có việc nhà hôm nay';
+
+  final List<Map<String, dynamic>> _expenses = [];
+  final Map<String, double> _settlements = {};
+  List<String> _memberIds = [];
+  FinanceService? _financeService;
 
   StreamSubscription? _shoppingStreamSub;
+  StreamSubscription<List<Chore>>? _choreStreamSub;
+  StreamSubscription<List<Map<String, dynamic>>>? _expenseStreamSub;
+  StreamSubscription<Map<String, double>>? _settlementStreamSub;
 
   @override
   void initState() {
@@ -57,6 +68,7 @@ class _DynamicHomeScreenState extends State<DynamicHomeScreen> {
     String? houseId;
 
     if (uid != null) {
+      _currentUserId = uid;
       hasHouse = await houseService.hasHouse(uid);
       if (hasHouse) {
         houseName = await houseService.getHouseName(uid) ?? 'Nhà của bạn';
@@ -83,19 +95,105 @@ class _DynamicHomeScreenState extends State<DynamicHomeScreen> {
 
     // Đăng ký stream để đếm số món cần mua (chưa hoàn thành)
     _subscribeShoppingCount();
+    _subscribeChorePreview();
+    _subscribeFinanceData();
+  }
+
+  void _subscribeFinanceData() {
+    _expenseStreamSub?.cancel();
+    _settlementStreamSub?.cancel();
+
+    final hid = _houseId;
+    if (hid == null) return;
+
+    _financeService = FinanceService(houseId: hid);
+
+    // Load members first
+    HouseService().houseMembersStream(hid).listen((memberIds) {
+      if (!mounted) return;
+      setState(() {
+        _memberIds = memberIds;
+      });
+    });
+
+    // Listen to expenses
+    _expenseStreamSub = _financeService!.expensesStream().listen((items) {
+      if (!mounted) return;
+      setState(() {
+        _expenses
+          ..clear()
+          ..addAll(items);
+        _updateFinanceData();
+      });
+    });
+
+    // Listen to settlements
+    _settlementStreamSub = _financeService!.settlementsStream().listen((m) {
+      if (!mounted) return;
+      setState(() {
+        _settlements
+          ..clear()
+          ..addAll(m);
+        _updateFinanceData();
+      });
+    });
+  }
+
+  void _updateFinanceData() {
+    if (_currentUserId == null) return;
+
+    final net = computeNetBalances(
+      _expenses,
+      _settlements,
+      _currentUserId,
+      _memberIds,
+    );
+
+    final totalOweYou = net.entries
+        .where((e) => e.key != _currentUserId && e.value > 0.5)
+        .fold(0.0, (p, e) => p + e.value);
+    final totalYouOwe = net.entries
+        .where((e) => e.key != _currentUserId && e.value < -0.5)
+        .fold(0.0, (p, e) => p + e.value.abs());
+
+    setState(() {
+      _myDebt = totalYouOwe;
+      _othersOweMe = totalOweYou;
+    });
   }
 
   void _subscribeShoppingCount() {
     _shoppingStreamSub?.cancel();
     final hid = _houseId;
     if (hid == null) return;
-    _shoppingStreamSub = BulletinService()
-        .shoppingItemsStream(hid)
-        .listen((items) {
+    _shoppingStreamSub = BulletinService().shoppingItemsStream(hid).listen((items) {
       if (!mounted) return;
       final notDone = items.where((e) => !e.isCompleted).length;
       setState(() {
         _shoppingItemCount = notDone;
+      });
+    });
+  }
+
+  void _subscribeChorePreview() {
+    _choreStreamSub?.cancel();
+    final hid = _houseId;
+    if (hid == null) return;
+
+    _choreStreamSub = ChoreService().choresStream(hid).listen((chores) {
+      if (!mounted) return;
+      final pending = chores.where((c) => !c.isCompleted).toList()
+        ..sort((a, b) {
+          final aDue = a.dueDate ?? a.createdAt;
+          final bDue = b.dueDate ?? b.createdAt;
+          return aDue.compareTo(bDue);
+        });
+
+      setState(() {
+        _hasChoreToday = pending.isNotEmpty;
+        _currentChore = pending.isNotEmpty
+            ? pending.first.title
+            : 'Không có việc nhà hôm nay';
       });
     });
   }
@@ -195,18 +293,6 @@ class _DynamicHomeScreenState extends State<DynamicHomeScreen> {
           children: [
             _buildHeader(_userName, _houseName, _houseCode),
             const SizedBox(height: 24),
-            const Text(
-              "Việc nhà hôm nay",
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: Colors.grey,
-              ),
-            ),
-            const SizedBox(height: 12),
-            _hasChoreToday
-                ? _buildActiveChoreCard(_currentChore)
-                : _buildFreeStateCard(),
             _buildChoreSection(),
             const SizedBox(height: 24),
             const Text(
@@ -502,6 +588,9 @@ class _DynamicHomeScreenState extends State<DynamicHomeScreen> {
   @override
   void dispose() {
     _shoppingStreamSub?.cancel();
+    _choreStreamSub?.cancel();
+    _expenseStreamSub?.cancel();
+    _settlementStreamSub?.cancel();
     super.dispose();
   }
 }
