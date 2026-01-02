@@ -5,6 +5,8 @@ import '../../constants/app_colors.dart';
 import '../chores/screens/dashboard_screen.dart';
 import '../chores/screens/complete_screen.dart';
 import '../bulletin/screens/house_bulletin_screen.dart';
+import '../finance/screens/finance_main_screen.dart';
+=======
 import '../bulletin/screens/shopping_list_screen.dart';
 import '../finance/finance_main_screen.dart';
 import '../../core/services/auth_service.dart';
@@ -68,6 +70,10 @@ class _DynamicHomeScreenState extends State<DynamicHomeScreen> {
       _userName = userName;
       _houseName = houseName;
       _houseCode = houseCode;
+      _hasChoreToday = hasHouse ? _hasChoreToday : false;
+      _currentChore = _hasChoreToday
+          ? _currentChore
+          : 'Không có việc nhà hôm nay';
       _houseId = houseId;
       _myDebt = _myDebt;
       _othersOweMe = _othersOweMe;
@@ -118,10 +124,7 @@ class _DynamicHomeScreenState extends State<DynamicHomeScreen> {
               }
             },
             itemBuilder: (ctx) => const [
-              PopupMenuItem(
-                value: 'logout',
-                child: Text('Đăng xuất'),
-              ),
+              PopupMenuItem(value: 'logout', child: Text('Đăng xuất')),
             ],
           ),
         ],
@@ -167,9 +170,7 @@ class _DynamicHomeScreenState extends State<DynamicHomeScreen> {
     );
   }
 
-  Widget _buildBody(
-    int index,
-  ) {
+  Widget _buildBody(int index) {
     switch (index) {
       case 0:
         return _buildHomeTab();
@@ -203,6 +204,9 @@ class _DynamicHomeScreenState extends State<DynamicHomeScreen> {
               ),
             ),
             const SizedBox(height: 12),
+            _hasChoreToday
+                ? _buildActiveChoreCard(_currentChore)
+                : _buildFreeStateCard(),
             _buildChoreSection(),
             const SizedBox(height: 24),
             const Text(
@@ -272,18 +276,12 @@ class _DynamicHomeScreenState extends State<DynamicHomeScreen> {
             const SizedBox(height: 4),
             Text(
               houseName,
-              style: const TextStyle(
-                fontSize: 14,
-                color: Colors.grey,
-              ),
+              style: const TextStyle(fontSize: 14, color: Colors.grey),
             ),
             if (houseCode.isNotEmpty)
               Text(
                 'Mã nhà: $houseCode',
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey,
-                ),
+                style: const TextStyle(fontSize: 12, color: Colors.grey),
               ),
           ],
         ),
