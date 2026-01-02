@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import '../../../core/services/chore_service.dart';
+import '../models/chore.dart';
 
 class AssignScreen extends StatefulWidget {
   const AssignScreen({super.key});
@@ -8,42 +11,194 @@ class AssignScreen extends StatefulWidget {
 }
 
 class _AssignScreenState extends State<AssignScreen> {
-  final List<String> tasks = [
-    "Đổ rác",
-    "Lau nhà",
-    "Vệ sinh tủ lạnh",
-  ];
-
-  final List<String> members = [
-    "An",
-    "Bình",
-    "Hằng",
-  ];
-
+  String? _houseId;
+  List<Chore> _chores = [];
+  List<Map<String, String>> _members = []; // [{uid, name}]
+  List<String> _displayMemberNames = []; // tên hiển thị (gộp từ users + assignedToName)
   int weekIndex = 1;
   Map<String, String> currentAssign = {};
   final List<String> history = [];
+  bool _loading = true;
 
-  void rotateAssign() {
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    final hid = await ChoreService().currentUserHouseId();
+    if (hid == null) {
+      if (mounted) setState(() => _loading = false);
+      return;
+    }
+
+    // Lấy danh sách thành viên từ house (loại trùng) và map sang tên hiển thị
+    final houseDoc = await FirebaseFirestore.instance.collection('houses').doc(hid).get();
+    final memberIds = List<String>.from(houseDoc.data()?['members'] ?? []).toSet().toList();
+
+    // Lấy tên từ users với fallback thân thiện
+    final membersList = <Map<String, String>>[];
+    for (final uid in memberIds) {
+      final userDoc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
+      final data = userDoc.data() ?? {};
+      final email = data['email'] as String?;
+      final nameFromEmail = email != null && email.contains('@')
+          ? email.split('@').first
+          : null;
+      final name = (data['name'] as String?)?.trim();
+
+      final displayName = (name != null && name.isNotEmpty)
+          ? name
+          : (nameFromEmail ?? uid);
+
+      membersList.add({'uid': uid, 'name': displayName});
+    }
+
+    // Lấy chores một lần
+    final choresSnap = await FirebaseFirestore.instance
+        .collection('houses')
+        .doc(hid)
+        .collection('chores')
+        .orderBy('createdAt')
+        .get();
+    final choresList = choresSnap.docs.map((d) => Chore.fromJson(d.data(), d.id)).toList();
+
+    // Tên hiển thị: gộp tên thành viên (users) + tên được nhập khi tạo việc
+    final displayNamesSet = <String>{
+      ...membersList.map((m) => m['name']!),
+      ...choresList
+          .map((c) => c.assignedToName)
+          .whereType<String>()
+          .where((n) => n.trim().isNotEmpty && n != 'Chưa phân công')
+          .map((n) => n.trim()),
+    }..removeWhere((n) => n.isEmpty);
+
+    final displayNames = displayNamesSet.toList();
+    displayNames.sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+
+    if (!mounted) return;
     setState(() {
+      _houseId = hid;
+      _members = membersList;
+      _displayMemberNames = displayNames;
+      _chores = choresList;
+      _loading = false;
+    });
+  }
+
+  Future<void> rotateAssign() async {
+    if (_houseId == null || _chores.isEmpty || _members.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Chưa có đủ dữ liệu để phân công')),
+      );
+      return;
+    }
+
+    setState(() => _loading = true);
+
+    try {
+      final batch = FirebaseFirestore.instance.batch();
       currentAssign.clear();
 
-      for (int i = 0; i < tasks.length; i++) {
-        final assignee = members[(weekIndex - 1 + i) % members.length];
-        currentAssign[tasks[i]] = assignee;
+      for (int i = 0; i < _chores.length; i++) {
+        final chore = _chores[i];
+        String assignedName;
+        String assignedUid;
+        
+        if (chore.assignedToName != null && chore.assignedToName!.isNotEmpty && chore.assignedToName != 'Chưa phân công') {
+          // Giữ tên đã có
+          assignedName = chore.assignedToName!;
+          assignedUid = chore.assignedToUid ?? '';
+        } else {
+          // Quay vòng gán
+          final memberIndex = (weekIndex - 1 + i) % _members.length;
+          final member = _members[memberIndex];
+          assignedName = member['name']!;
+          assignedUid = member['uid']!;
+        }
+
+        currentAssign[chore.title] = assignedName;
+
+        // Cập nhật assignedToUid và assignedToName trong Firestore
+        final choreRef = FirebaseFirestore.instance
+            .collection('houses')
+            .doc(_houseId)
+            .collection('chores')
+            .doc(chore.id);
+        batch.update(choreRef, {
+          'assignedToUid': assignedUid,
+          'assignedToName': assignedName,
+          'updatedAt': Timestamp.fromDate(DateTime.now()),
+        });
 
         history.insert(
           0,
-          "Tuần $weekIndex: ${tasks[i]} → $assignee",
+          "Tuần $weekIndex: ${chore.title} → $assignedName",
         );
       }
 
+      // Lưu lịch sử phân công vào subcollection
+      final historyRef = FirebaseFirestore.instance
+          .collection('houses')
+          .doc(_houseId)
+          .collection('assignment_history')
+          .doc();
+      batch.set(historyRef, {
+        'weekIndex': weekIndex,
+        'assignments': currentAssign,
+        'createdAt': Timestamp.fromDate(DateTime.now()),
+      });
+
+      await batch.commit();
+
+      // Reload chores để cập nhật UI
+      await _loadData();
+
       weekIndex++;
-    });
+      if (mounted) {
+        setState(() => _loading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('✓ Phân công thành công!')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _loading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Lỗi: $e')),
+        );
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    if (_loading) {
+      return Scaffold(
+        backgroundColor: const Color(0xFFF6F7FB),
+        appBar: AppBar(
+          centerTitle: true,
+          elevation: 0,
+          title: const Text(
+            "Phân công tự động",
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+          flexibleSpace: Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  Color(0xFF5B6CFF),
+                  Color(0xFF8A7CFF),
+                ],
+              ),
+            ),
+          ),
+        ),
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
+
     return Scaffold(
       backgroundColor: const Color(0xFFF6F7FB),
       appBar: AppBar(
@@ -70,12 +225,12 @@ class _AssignScreenState extends State<AssignScreen> {
           _infoCard(
             title: "Danh sách việc nhà",
             icon: Icons.list_alt,
-            children: tasks.map((e) => _bulletText(e)).toList(),
+            children: _chores.map((c) => _bulletText(c.title)).toList(),
           ),
           _infoCard(
             title: "Danh sách thành viên",
             icon: Icons.people,
-            children: members.map((e) => _bulletText(e)).toList(),
+            children: _displayMemberNames.map((name) => _bulletText(name)).toList(),
           ),
 
           const SizedBox(height: 8),

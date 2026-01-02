@@ -6,6 +6,7 @@ import '../widgets/shopping_list_card.dart';
 import '../models/house_info.dart';
 import '../models/utility.dart';
 import '../models/shopping_item.dart';
+import '../models/house_rule.dart';
 import '../../../core/services/house_service.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../core/services/bulletin_service.dart';
@@ -23,14 +24,14 @@ class HouseBulletinScreen extends StatefulWidget {
 
 class _HouseBulletinScreenState extends State<HouseBulletinScreen> {
   HouseInfo? houseInfo;
-  late List<Utility> utilities;
+  List<Utility> utilities = [];
   List<ShoppingItem> shoppingItems = [];
-  late List<String> rules;
+  List<HouseRule> rules = [];
   bool _isLoading = true;
   String? _houseId;
   Stream<List<ShoppingItem>>? _shoppingStream;
   StreamSubscription<List<ShoppingItem>>? _shoppingSub;
-  StreamSubscription<List<Utility>>? _utilitiesSub;
+  StreamSubscription<List<HouseRule>>? _rulesSub;
 
   @override
   void initState() {
@@ -65,31 +66,7 @@ class _HouseBulletinScreenState extends State<HouseBulletinScreen> {
     houseInfo = fetchedHouse;
     _houseId = houseId ?? fetchedHouse.id;
 
-    if (_houseId != null) {
-      _shoppingStream = BulletinService().shoppingItemsStream(_houseId!);
-      _shoppingSub?.cancel();
-      _shoppingSub = _shoppingStream!.listen((items) {
-        if (!mounted) return;
-        setState(() {
-          shoppingItems = items;
-        });
-      });
-      // Subscribe to utilities; merge into defaults by id when present
-      _utilitiesSub?.cancel();
-      _utilitiesSub = BulletinService().utilitiesStream(_houseId!).listen((items) {
-        if (!mounted) return;
-        setState(() {
-          if (items.isEmpty) {
-            // Keep defaults
-            return;
-          }
-          // Map incoming items into current utilities list by id
-          final byId = {for (final u in items) u.id: u};
-          utilities = utilities.map((u) => byId[u.id] ?? u).toList();
-        });
-      });
-    }
-
+    // Initialize default utilities
     utilities = [
       Utility.wifi(price: 'Pass: 123456789'),
       Utility.sdt(price: 'Chi nháy, Công an'),
@@ -97,44 +74,28 @@ class _HouseBulletinScreenState extends State<HouseBulletinScreen> {
       Utility.rules(price: 'Xem chi tiết ↓'),
     ];
 
-    shoppingItems = [
-      ShoppingItem(
-        id: 'item1',
-        name: 'Nước túi báí',
-        quantity: '',
-        assignedTo: '',
-        isCompleted: false,
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
-      ),
-      ShoppingItem(
-        id: 'item2',
-        name: 'Giấy vệ sinh',
-        quantity: '',
-        assignedTo: '',
-        isCompleted: false,
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
-      ),
-      ShoppingItem(
-        id: 'item3',
-        name: 'Bằng đèn',
-        quantity: '',
-        assignedTo: '',
-        isCompleted: false,
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
-      ),
-    ];
-
-    rules = [
-      'Giữ gìn vệ sinh chung, đặc biệt là phòng khách và nhà vệ sinh',
-      'Không gây tiếng ồn sau 22h đêm',
-      'Chia sẻ chi phí tiện ích công bằng hàng tháng',
-      'Thông báo trước khi mời khách qua đêm',
-      'Dọn dẹp đồ vật cá nhân trong không gian chung',
-      'Tham gia dọn dẹp chung ít nhất 1 lần/tuần',
-    ];
+    if (_houseId != null) {
+      final bulletinService = BulletinService();
+      
+      // Subscribe to shopping items
+      _shoppingStream = bulletinService.shoppingItemsStream(_houseId!);
+      _shoppingSub?.cancel();
+      _shoppingSub = _shoppingStream!.listen((items) {
+        if (!mounted) return;
+        setState(() {
+          shoppingItems = items;
+        });
+      });
+      
+      // Subscribe to rules from Firestore
+      _rulesSub?.cancel();
+      _rulesSub = bulletinService.rulesStream(_houseId!).listen((items) {
+        if (!mounted) return;
+        setState(() {
+          rules = items;
+        });
+      });
+    }
 
     if (!mounted) return;
     setState(() {
@@ -145,7 +106,7 @@ class _HouseBulletinScreenState extends State<HouseBulletinScreen> {
   @override
   void dispose() {
     _shoppingSub?.cancel();
-    _utilitiesSub?.cancel();
+    _rulesSub?.cancel();
     super.dispose();
   }
 
@@ -169,7 +130,12 @@ class _HouseBulletinScreenState extends State<HouseBulletinScreen> {
   void _showRulesScreen() {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => const RulesScreen()),
+      MaterialPageRoute(
+        builder: (context) => RulesScreen(
+          houseId: _houseId,
+          initialRules: rules,
+        ),
+      ),
     );
   }
 
