@@ -15,7 +15,6 @@ import '../../../core/services/finance_service.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../core/services/house_service.dart';
 import '../../../core/services/user_service.dart';
-import '../../../core/services/expense_service.dart';
 import '../../../models/user_profile.dart';
 
 class FinanceMainScreen extends StatefulWidget {
@@ -34,7 +33,6 @@ class _FinanceMainScreenState extends State<FinanceMainScreen> {
   final Map<String, double> _settlements = {};
 
   late final FinanceService _financeService;
-  late final ExpenseService _expenseService;
   final UserService _userService = UserService();
   final HouseService _houseService = HouseService();
 
@@ -64,7 +62,6 @@ class _FinanceMainScreenState extends State<FinanceMainScreen> {
     setState(() {
       _houseId = hid;
       _financeService = FinanceService(houseId: _houseId);
-      _expenseService = ExpenseService(houseId: hid);
     });
 
     // Load members
@@ -150,10 +147,6 @@ class _FinanceMainScreenState extends State<FinanceMainScreen> {
             }
             final payerId = payerIdRaw;
 
-            print(
-              '💰 AddExpense result: payer=$payerId, currentUser=$_currentUserId',
-            );
-
             final totalAmount = (result['amount'] as num?)?.toDouble() ?? 0.0;
             final title = result['title'] as String? ?? 'Chi phí chung';
             final date = result['date'] as DateTime? ?? DateTime.now();
@@ -176,13 +169,8 @@ class _FinanceMainScreenState extends State<FinanceMainScreen> {
             participants[payerId] = true;
 
             try {
-              print('🔥 BẮT ĐẦU GHI DỮ LIỆU');
-              // 1️⃣ Xác định danh sách participants và tính toán split
-              Map<String, double> splitAmounts =
-                  {}; // { memberId: amount người đó phải trả }
-              print('SplitMode USED: $splitMode');
-
-              splitAmounts = _calculateSplitAmounts(
+              // Tính toán split
+              final splitAmounts = _calculateSplitAmounts(
                 splitMode: splitMode,
                 splitDetails: splitDetails,
                 payerId: payerId,
@@ -190,17 +178,17 @@ class _FinanceMainScreenState extends State<FinanceMainScreen> {
                 selectedMembers: selectedMembers,
               );
 
-              print('✅ Split amounts: $splitAmounts');
+              final batch = FirebaseFirestore.instance.batch();
 
-              // 2️⃣ Tạo expense
+              // Tạo reference expense
               final expenseRef = FirebaseFirestore.instance
                   .collection('houses')
                   .doc(_houseId)
                   .collection('expenses')
                   .doc();
 
-              print('✅ Đang ghi expense...');
-              await expenseRef.set({
+              // Thêm expense vào batch
+              batch.set(expenseRef, {
                 'createdBy': _currentUserId ?? 'unknown',
                 'paidBy': payerId,
                 'totalAmount': totalAmount,
@@ -213,20 +201,61 @@ class _FinanceMainScreenState extends State<FinanceMainScreen> {
                 'date': Timestamp.fromDate(date),
                 'createdAt': FieldValue.serverTimestamp(),
               });
-              print('✅ Đã ghi expense: ${expenseRef.id}');
 
-              // 3️⃣ Update balances (TẠO 2 CHIỀU NỢ) - theo splitAmounts
+              // Chuẩn bị đọc tất cả balance cần thiết (song song)
+              final balanceReadsMap = <String, Future<DocumentSnapshot>>{};
               for (final entry in splitAmounts.entries) {
                 final memberId = entry.key;
-                final amount = entry.value;
+                final amount = (entry.value as num?)?.toDouble() ?? 0;
+                if (amount > 0.01) {
+                  balanceReadsMap['${memberId}_${payerId}_1'] =
+                      FirebaseFirestore.instance
+                          .collection('houses')
+                          .doc(_houseId)
+                          .collection('balances')
+                          .doc(memberId)
+                          .collection('debts')
+                          .doc(payerId)
+                          .get();
+                  balanceReadsMap['${payerId}_${memberId}_2'] =
+                      FirebaseFirestore.instance
+                          .collection('houses')
+                          .doc(_houseId)
+                          .collection('balances')
+                          .doc(payerId)
+                          .collection('debts')
+                          .doc(memberId)
+                          .get();
+                }
+              }
 
-                if (amount <= 0.01) continue; // Bỏ qua nếu < 0.01
+              // Đợi tất cả reads hoàn thành song song
+              final balanceSnaps = <String, DocumentSnapshot>{};
+              await Future.wait(
+                balanceReadsMap.entries.map((e) async {
+                  try {
+                    balanceSnaps[e.key] = await e.value;
+                  } catch (_) {}
+                }),
+              );
 
-                print(
-                  '💰 Đang update balance: $memberId nợ $payerId ($amount)',
-                );
+              // Thêm tất cả balance updates vào batch
+              for (final entry in splitAmounts.entries) {
+                final memberId = entry.key;
+                final amount = (entry.value as num?)?.toDouble() ?? 0.0;
 
-                // CHIỀU 1: memberId nợ payerId (view của người nợ)
+                if (amount <= 0.01) continue;
+
+                // CHIỀU 1
+                final snap1Key = '${memberId}_${payerId}_1';
+                final snap1 = balanceSnaps[snap1Key];
+                double newAmount = amount;
+                if (snap1 != null && snap1.exists) {
+                  final current = snap1.data() as Map<String, dynamic>?;
+                  newAmount =
+                      ((current?['amount'] ?? 0) as num).toDouble() + amount;
+                }
+
                 final debtRef1 = FirebaseFirestore.instance
                     .collection('houses')
                     .doc(_houseId)
@@ -235,19 +264,7 @@ class _FinanceMainScreenState extends State<FinanceMainScreen> {
                     .collection('debts')
                     .doc(payerId);
 
-                final balanceSnap1 = await debtRef1.get();
-                double newAmount = amount;
-
-                if (balanceSnap1.exists) {
-                  final current = balanceSnap1.data();
-                  newAmount =
-                      ((current?['amount'] ?? 0) as num).toDouble() + amount;
-                  print('   Cộng dồn chiều 1: $newAmount');
-                } else {
-                  print('   Tạo mới chiều 1: $newAmount');
-                }
-
-                await debtRef1.set({
+                batch.set(debtRef1, {
                   'fromUserId': memberId,
                   'toUserId': payerId,
                   'amount': newAmount,
@@ -256,9 +273,17 @@ class _FinanceMainScreenState extends State<FinanceMainScreen> {
                   'confirmedBy': false,
                   'updatedAt': FieldValue.serverTimestamp(),
                 });
-                print('✅ Đã update balance chiều 1: $memberId → $payerId');
 
-                // CHIỀU 2: payerId có được trả bởi memberId (view của người cho vay)
+                // CHIỀU 2
+                final snap2Key = '${payerId}_${memberId}_2';
+                final snap2 = balanceSnaps[snap2Key];
+                double newAmount2 = amount;
+                if (snap2 != null && snap2.exists) {
+                  final current = snap2.data() as Map<String, dynamic>?;
+                  newAmount2 =
+                      ((current?['amount'] ?? 0) as num).toDouble() + amount;
+                }
+
                 final debtRef2 = FirebaseFirestore.instance
                     .collection('houses')
                     .doc(_houseId)
@@ -267,18 +292,7 @@ class _FinanceMainScreenState extends State<FinanceMainScreen> {
                     .collection('debts')
                     .doc(memberId);
 
-                final balanceSnap2 = await debtRef2.get();
-                double newAmount2 = amount;
-
-                if (balanceSnap2.exists) {
-                  final current = balanceSnap2.data();
-                  newAmount2 =
-                      ((current?['amount'] ?? 0) as num).toDouble() + amount;
-                } else {
-                  print('   Tạo mới chiều 2: $newAmount2');
-                }
-
-                await debtRef2.set({
+                batch.set(debtRef2, {
                   'fromUserId': payerId,
                   'toUserId': memberId,
                   'amount': newAmount2,
@@ -287,15 +301,13 @@ class _FinanceMainScreenState extends State<FinanceMainScreen> {
                   'confirmedBy': false,
                   'updatedAt': FieldValue.serverTimestamp(),
                 });
-                print('✅ Đã update balance chiều 2: $payerId → $memberId');
               }
 
-              print('🎉 HOÀN THÀNH GHI DỮ LIỆU');
+              // Ghi tất cả cùng lúc (1 batch operation)
+              await batch.commit();
 
               // Đã ghi expense đúng với splits, không cần ghi lại
-            } catch (e, stackTrace) {
-              print('❌ LỖI: $e');
-              print('Stack: $stackTrace');
+            } catch (e) {
               scaffoldMessenger.showSnackBar(
                 SnackBar(
                   content: Text('Lỗi thêm chi phí: $e'),
@@ -450,16 +462,6 @@ class _FinanceMainScreenState extends State<FinanceMainScreen> {
   }
 
   Future<void> _handleTransactionTap(Map<String, dynamic> e) async {
-    // Parse tên từ title
-    String fromName = '';
-    String toName = '';
-    final title = e['name'] as String;
-    if (title.contains('→')) {
-      final parts = title.split('→');
-      fromName = parts[0].trim();
-      toName = parts.length > 1 ? parts[1].trim() : '';
-    }
-
     final amountValue = e['amountValue'] as double;
     final isPositive = e['isPositive'] as bool;
     final memberId = e['id'] as String;
@@ -472,8 +474,8 @@ class _FinanceMainScreenState extends State<FinanceMainScreen> {
 
     // Lấy tiêu đề hóa đơn gần nhất cho cặp này (để hiển thị rõ ràng)
     final expenseTitle = _findLatestExpenseTitle(
-      payerId: fromUserId ?? '',
-      debtorId: toUserId ?? '',
+      payerId: fromUserId,
+      debtorId: toUserId,
     );
 
     // Mở màn hình thanh toán
@@ -481,8 +483,8 @@ class _FinanceMainScreenState extends State<FinanceMainScreen> {
       context,
       MaterialPageRoute(
         builder: (context) => PaymentScreen(
-          fromName: _getUserDisplayName(fromUserId ?? ''),
-          toName: _getUserDisplayName(toUserId ?? ''),
+          fromName: _getUserDisplayName(fromUserId),
+          toName: _getUserDisplayName(toUserId),
           amount: amountValue,
           date: DateTime.now(),
           description: expenseTitle,
@@ -604,13 +606,11 @@ class _FinanceMainScreenState extends State<FinanceMainScreen> {
             double pairAmount = 0.0;
             if (expensePayer == payerId && splits.containsKey(debtorId)) {
               final debtorSplit = splits[debtorId];
-              if (debtorSplit is num)
-                pairAmount = (debtorSplit as num).toDouble();
+              if (debtorSplit is num) pairAmount = debtorSplit.toDouble();
             } else if (expensePayer == debtorId &&
                 splits.containsKey(payerId)) {
               final payerSplit = splits[payerId];
-              if (payerSplit is num)
-                pairAmount = (payerSplit as num).toDouble();
+              if (payerSplit is num) pairAmount = payerSplit.toDouble();
             }
 
             if (pairAmount <= 0.0) continue;
