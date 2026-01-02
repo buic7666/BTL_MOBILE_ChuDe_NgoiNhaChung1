@@ -46,7 +46,6 @@ class _TaskListScreenState extends State<TaskListScreen> {
 
   void _showEditDialog(BuildContext context, String houseId, Chore chore) {
     final titleCtrl = TextEditingController(text: chore.title);
-    final nameCtrl = TextEditingController(text: chore.assignedToName ?? '');
     String frequency = chore.frequency ?? 'Hằng ngày';
     int points = chore.points;
 
@@ -62,14 +61,6 @@ class _TaskListScreenState extends State<TaskListScreen> {
                 controller: titleCtrl,
                 decoration: const InputDecoration(
                   labelText: 'Tên công việc',
-                  border: OutlineInputBorder(),
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: nameCtrl,
-                decoration: const InputDecoration(
-                  labelText: 'Người thực hiện',
                   border: OutlineInputBorder(),
                 ),
               ),
@@ -111,7 +102,6 @@ class _TaskListScreenState extends State<TaskListScreen> {
                 houseId: houseId,
                 choreId: chore.id,
                 title: titleCtrl.text.trim(),
-                assignedToName: nameCtrl.text.trim(),
                 frequency: frequency,
                 points: points,
               );
@@ -124,7 +114,6 @@ class _TaskListScreenState extends State<TaskListScreen> {
                 );
               }
               titleCtrl.dispose();
-              nameCtrl.dispose();
             },
             child: const Text('Lưu'),
           ),
@@ -208,14 +197,6 @@ class _TaskListScreenState extends State<TaskListScreen> {
                                           ),
                                         ),
                                         const SizedBox(height: 6),
-                                        Text(
-                                          'Người thực hiện: ${c.assignedToName ?? '—'}',
-                                          style: const TextStyle(
-                                            fontSize: 13,
-                                            color: Color(0xFF5B5F7D),
-                                          ),
-                                        ),
-                                        const SizedBox(height: 2),
                                         Text(
                                           'Chu kỳ: ${c.frequency ?? 'Chưa đặt'}',
                                           style: const TextStyle(

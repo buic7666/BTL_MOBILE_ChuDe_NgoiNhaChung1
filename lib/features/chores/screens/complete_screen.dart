@@ -198,7 +198,6 @@ class _CompleteScreenState extends State<CompleteScreen> {
                       ),
 
                       const SizedBox(height: 10),
-                      Text("Người làm: ${chore.assignedToName ?? 'Chưa phân công'}"),
                       Text("Điểm thưởng: +${chore.points} điểm"),
                       if (chore.awarded)
                         const Text(

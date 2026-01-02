@@ -10,7 +10,6 @@ class CreateTaskScreen extends StatefulWidget {
 
 class _CreateTaskScreenState extends State<CreateTaskScreen> {
   final TextEditingController taskNameController = TextEditingController();
-  final TextEditingController assigneeController = TextEditingController();
 
   String frequency = "Hằng ngày";
   int points = 1;
@@ -18,7 +17,6 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
   @override
   void dispose() {
     taskNameController.dispose();
-    assigneeController.dispose();
     super.dispose();
   }
 
@@ -33,9 +31,6 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
       return;
     }
 
-    final assigneeName = assigneeController.text.trim().isEmpty
-        ? 'Chưa phân công'
-        : assigneeController.text.trim();
     final title = taskNameController.text.trim().isEmpty
         ? 'Chưa đặt tên'
         : taskNameController.text.trim();
@@ -43,8 +38,6 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
     final success = await choreService.addChore(
       houseId: houseId,
       title: title,
-      assignedToUid: null,
-      assignedToName: assigneeName,
       frequency: frequency,
       points: points,
     );

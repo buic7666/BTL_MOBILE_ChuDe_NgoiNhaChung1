@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../core/services/chore_service.dart';
+import '../../../core/services/house_service.dart';
 
 class RankingScreen extends StatefulWidget {
   const RankingScreen({super.key});
@@ -27,26 +28,30 @@ class _RankingScreenState extends State<RankingScreen> {
     }
 
     try {
-      // Lấy tất cả chores đã hoàn thành + đã thưởng
-      final choresSnap = await FirebaseFirestore.instance
-          .collection('houses')
-          .doc(houseId)
-          .collection('chores')
-          .where('completed', isEqualTo: true)
-          .where('awarded', isEqualTo: true)
-          .get();
-
-      // Nhóm điểm theo assignedToName
-      final scoreMap = <String, int>{};
-      for (final doc in choresSnap.docs) {
-        final data = doc.data();
-        final assignedToName = data['assignedToName'] as String? ?? 'Không xác định';
-        final points = data['points'] as int? ?? 0;
-
-        scoreMap[assignedToName] = (scoreMap[assignedToName] ?? 0) + points;
+      final members = await HouseService().getHouseMembers(houseId);
+      if (members.isEmpty) {
+        if (mounted) setState(() => _loading = false);
+        return;
       }
 
-      // Chuyển thành list và sắp xếp
+      final scoreMap = <String, int>{};
+
+      // Firestore whereIn giới hạn 10, chia batch
+      for (int i = 0; i < members.length; i += 10) {
+        final batchIds = members.skip(i).take(10).toList();
+        final snap = await FirebaseFirestore.instance
+            .collection('users')
+            .where(FieldPath.documentId, whereIn: batchIds)
+            .get();
+
+        for (final doc in snap.docs) {
+          final data = doc.data();
+          final name = data['name'] as String? ?? 'Không xác định';
+          final points = (data['points'] as num?)?.toInt() ?? 0;
+          scoreMap[name] = (scoreMap[name] ?? 0) + points;
+        }
+      }
+
       final rankingList = scoreMap.entries
           .map((e) => {'name': e.key, 'point': e.value})
           .toList();

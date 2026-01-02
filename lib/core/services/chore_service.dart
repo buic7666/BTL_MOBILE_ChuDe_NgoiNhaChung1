@@ -29,8 +29,6 @@ class ChoreService {
   Future<bool> addChore({
     required String houseId,
     required String title,
-    String? assignedToUid,
-    String? assignedToName,
     String? frequency,
     DateTime? dueDate,
     int points = 1,
@@ -43,8 +41,8 @@ class ChoreService {
           .collection('chores')
           .add({
         'title': title,
-        'assignedToUid': assignedToUid,
-        'assignedToName': assignedToName,
+          'assignedToUid': null,
+          'assignedToName': null,
         'frequency': frequency,
         'dueDate': dueDate != null ? Timestamp.fromDate(dueDate) : null,
         'completed': false,
@@ -75,9 +73,8 @@ class ChoreService {
 
       // Người nhận điểm: ưu tiên assignedToUid, fallback người đang bấm
       final currentUser = AuthService().currentFirebaseUser;
-      final uid = chore.assignedToUid ?? currentUser?.uid;
-      final displayName = chore.assignedToName ??
-          (currentUser?.displayName?.trim().isNotEmpty == true
+      final uid = currentUser?.uid;
+      final displayName = (currentUser?.displayName?.trim().isNotEmpty == true
               ? currentUser!.displayName!
               : (currentUser?.email?.split('@').first ?? 'Không xác định'));
 
@@ -86,20 +83,17 @@ class ChoreService {
       batch.update(docRef, {
         'completed': newCompleted,
         'updatedAt': Timestamp.fromDate(DateTime.now()),
-        // nếu đánh dấu hoàn thành, set awarded true để tránh cộng điểm lặp
-        if (newCompleted) 'awarded': true,
-        // Nếu chưa có người được gán, lưu lại người bấm hoàn thành
-        if (newCompleted && chore.assignedToUid == null && uid != null)
-          'assignedToUid': uid,
-        if (newCompleted && chore.assignedToUid == null && uid != null)
-          'assignedToName': displayName,
+        'awarded': newCompleted,
+        // Không cần phân công trước, chỉ lưu người đã hoàn thành (nếu có)
+        if (newCompleted && uid != null) 'assignedToUid': uid,
+        if (newCompleted && uid != null) 'assignedToName': displayName,
       });
 
       String? awardedUserName;
       int? awardedPoints;
       // Cộng điểm nếu hoàn thành, chưa awarded
       // Người nhận điểm: uid (đã lấy ở trên). Nếu vẫn null => không cộng điểm.
-      if (newCompleted && !chore.awarded && uid != null) {
+      if (newCompleted && uid != null) {
         final userRef = _firestore.collection('users').doc(uid);
 
         // Đảm bảo user document tồn tại, khởi tạo points = 0 nếu chưa có
@@ -164,7 +158,6 @@ class ChoreService {
     required String houseId,
     required String choreId,
     required String title,
-    String? assignedToName,
     String? frequency,
     int points = 1,
   }) async {
@@ -176,7 +169,8 @@ class ChoreService {
           .doc(choreId)
           .update({
         'title': title,
-        'assignedToName': assignedToName,
+        'assignedToUid': null,
+        'assignedToName': null,
         'frequency': frequency,
         'points': points,
         'updatedAt': Timestamp.fromDate(DateTime.now()),
