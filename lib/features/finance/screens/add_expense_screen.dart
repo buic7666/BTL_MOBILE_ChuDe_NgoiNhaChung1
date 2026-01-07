@@ -22,7 +22,7 @@ class AddExpenseScreen extends StatefulWidget {
 
 class _AddExpenseScreenState extends State<AddExpenseScreen> {
   // --- GIỮ NGUYÊN LOGIC KHỞI TẠO TỪ CODE CŨ ---
-  final _amountController = TextEditingController(text: '1000');
+  final _amountController = TextEditingController();
   final _titleController = TextEditingController();
   int _selectedPayerIndex = 0;
   SplitMode _splitMode = SplitMode.equal;
@@ -49,8 +49,9 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
   void initState() {
     super.initState();
     _initializeMembers();
-    // Set default title logic if needed, or leave empty as per original
-    _titleController.text = "Ăn trưa nhóm";
+    // Form trống khi mở màn hình
+    _titleController.clear();
+    _amountController.clear();
   }
 
   void _initializeMembers() {
@@ -339,88 +340,97 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
         borderRadius: BorderRadius.circular(16),
       ),
       padding: const EdgeInsets.all(8),
-      child: Column(
-        children: List.generate(_members.length, (index) {
-          final m = _members[index];
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(context).size.height * 0.4,
+        ),
+        child: ListView.builder(
+          shrinkWrap: true,
+          physics: const ClampingScrollPhysics(),
+          itemCount: _members.length,
+          itemBuilder: (context, index) {
+            final m = _members[index];
 
-          // Tính toán số tiền hiển thị (Logic cũ)
-          double amount = 0;
-          if (_splitMode == SplitMode.perPerson) {
-            amount = _memberSelected[index]
-                ? (_selectedCount > 0 ? _parsedAmount / _selectedCount : 0)
-                : 0;
-          } else {
-            amount = _parsedAmount / _members.length;
-          }
+            // Tính toán số tiền hiển thị (Logic cũ)
+            double amount = 0;
+            if (_splitMode == SplitMode.perPerson) {
+              amount = _memberSelected[index]
+                  ? (_selectedCount > 0 ? _parsedAmount / _selectedCount : 0)
+                  : 0;
+            } else {
+              amount = _parsedAmount / _members.length;
+            }
 
-          return Container(
-            margin: const EdgeInsets.only(bottom: 8),
-            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.02),
-                  blurRadius: 4,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Row(
-              children: [
-                // Checkbox cho chế độ "Theo người" (Ảnh 3)
-                if (_splitMode == SplitMode.perPerson)
-                  Padding(
-                    padding: const EdgeInsets.only(right: 12.0),
-                    child: SizedBox(
-                      width: 24,
-                      height: 24,
-                      child: Checkbox(
-                        value: _memberSelected[index],
-                        activeColor: const Color(0xFF5A55E6),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(4),
+            return Container(
+              margin: const EdgeInsets.only(bottom: 8),
+              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.02),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Row(
+                children: [
+                  // Checkbox cho chế độ "Theo người" (Ảnh 3)
+                  if (_splitMode == SplitMode.perPerson)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 12.0),
+                      child: SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: Checkbox(
+                          value: _memberSelected[index],
+                          activeColor: const Color(0xFF5A55E6),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          onChanged: (v) => setState(
+                            () => _memberSelected[index] = v ?? false,
+                          ),
                         ),
-                        onChanged: (v) =>
-                            setState(() => _memberSelected[index] = v ?? false),
+                      ),
+                    ),
+
+                  CircleAvatar(
+                    backgroundColor: m['color'],
+                    radius: 18,
+                    child: Text(
+                      m['name'][0],
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
                   ),
-
-                CircleAvatar(
-                  backgroundColor: m['color'],
-                  radius: 18,
-                  child: Text(
-                    m['name'][0],
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      m['name'],
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    m['name'],
+                  Text(
+                    _moneyFmt.format(amount),
                     style: const TextStyle(
+                      color: Color(0xFF5A55E6),
                       fontWeight: FontWeight.bold,
                       fontSize: 15,
                     ),
                   ),
-                ),
-                Text(
-                  _moneyFmt.format(amount),
-                  style: const TextStyle(
-                    color: Color(0xFF5A55E6),
-                    fontWeight: FontWeight.bold,
-                    fontSize: 15,
-                  ),
-                ),
-              ],
-            ),
-          );
-        }),
+                ],
+              ),
+            );
+          },
+        ),
       ),
     );
   }
@@ -737,6 +747,31 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
   // --- HÀM XỬ LÝ DỮ LIỆU ĐẦU RA (GIỮ NGUYÊN BẢN GỐC CỦA BẠN) ---
   // Quan trọng: Hàm này đảm bảo dữ liệu trả về giống hệt code cũ để không lỗi tính toán
   void _onAddPressed() {
+    final scaffold = ScaffoldMessenger.of(context);
+    final rawText = _amountController.text.trim();
+    final normalized = rawText.replaceAll(RegExp(r'[đ,\s]'), '');
+    final value = double.tryParse(normalized);
+
+    if (value == null) {
+      scaffold.showSnackBar(
+        const SnackBar(
+          content: Text('Phải nhập số'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    if (value <= 0) {
+      scaffold.showSnackBar(
+        const SnackBar(
+          content: Text('Phải nhập số lớn hơn 0'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
     final payerMember = _members[_selectedPayerIndex];
     final payerId = payerMember['id'] as String;
 
@@ -745,7 +780,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
     );
 
     final expense = {
-      'amount': _parsedAmount,
+      'amount': value,
       'title': _titleController.text,
       'payer': payerId,
       'splitMode': _splitMode.toString(),
