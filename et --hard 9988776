@@ -1,0 +1,36 @@
+[33m52b37ba[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mdev[m[33m, [m[1;31morigin/dev[m[33m, [m[1;31morigin/Hung[m[33m, [m[1;32mDong[m[33m)[m Dong chinh sưa mot chut ve man hinh dieu huong
+[33m96206e0[m Dong sua loi sau khi gop code
+[33m23f7898[m Merge pull request #10 from buic7666/Hung
+[33maa13341[m Merge branch 'dev' into Hung
+[33mdb80c39[m[33m ([m[1;32mHung[m[33m)[m Hung hoan thanh code
+[33mcb817d3[m Don dep code bi thua
+[33m7d97614[m cap nhat module 2 va 3
+[33mdb6daa6[m Update lib/features/auth/register_screen.dart
+[33m6923e11[m Merge pull request #9 from buic7666/Dong
+[33m51a75a2[m[33m ([m[1;31morigin/Dong[m[33m)[m Merge branch 'dev' into Dong
+[33mde7b871[m Merge pull request #7 from buic7666/Khanh
+[33mef303e9[m[33m ([m[1;31morigin/Khanh[m[33m)[m Fix và update giao dien tai chinh ,them chi tieu
+[33m10c22ab[m [Feature] them moi phan thanh toan
+[33md11b73a[m Feature: Tao giao dien modules 2
+[33m5bf23d6[m Finance UI: switch to a flat merged transaction list; remove section headers
+[33m0436171[m Restore finance screens to state before merge/notification change (commit 3b7daa6)
+[33m5de9ff9[m Restore finance_main_screen.dart to pre-revert state per user request
+[33me4e6115[m Revert finance_main_screen.dart to previous snapshot per user request
+[33m8c3b9ba[m Label debts: show 'X đang nợ bạn' and 'Bạn đang nợ X' instead of arrows
+[33mae72360[m Use cached ScaffoldMessenger and remove unused makeSection helper
+[33m37606ec[m Merge owes/youOwe lists into single flat list in _buildTransactionList
+[33m3b7daa6[m Fix string interpolation lint in AddExpenseScreen
+[33m9bfde13[m Avoid BuildContext across async gaps: cache ScaffoldMessenger before awaiting bottom sheet
+[33m4361a37[m Show AddExpenseScreen as bottom sheet; add mounted check
+[33m0e55085[m Restore finance_main_screen.dart to prior working snapshot
+[33mba43d37[m cap nhat chuc nang module 3
+[33m37c1d52[m Dong Cap nhat chuc nang moi
+[33ma9a72cd[m[33m ([m[1;31morigin/main[m[33m, [m[1;32mmain[m[33m)[m Merge pull request #6 from buic7666/dev
+[33m91f5fb2[m Merge pull request #5 from buic7666/Dong
+[33m45a43a7[m update
+[33mbde4ed5[m Dong vua cap nhat giao dien dang nhap va trang chu
+[33m13db7c0[m Merge pull request #3 from buic7666/Dong
+[33m144bd37[m Dong vua cap nhat giao dien dang nhap va trang chu
+[33md7bcc84[m Merge pull request #2 from buic7666/dev
+[33m8e1fff6[m Tao cau truc thu muc du an
+[33m94abdbb[m[33m ([m[1;32mKhanh[m[33m)[m Khoi tao du an HousePal - Initial Commit

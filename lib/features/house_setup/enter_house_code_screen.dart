@@ -12,7 +12,10 @@ class EnterHouseCodeScreen extends StatefulWidget {
 }
 
 class _EnterHouseCodeScreenState extends State<EnterHouseCodeScreen> {
-  final List<TextEditingController> _controllers = List.generate(6, (_) => TextEditingController());
+  final List<TextEditingController> _controllers = List.generate(
+    6,
+    (_) => TextEditingController(),
+  );
   final List<FocusNode> _focusNodes = List.generate(6, (_) => FocusNode());
   bool _isLoading = false;
 
@@ -34,7 +37,7 @@ class _EnterHouseCodeScreenState extends State<EnterHouseCodeScreen> {
   }
 
   Future<void> _validateAndEnter() async {
-    final code = _controllers.map((c) => c.text).join().toUpperCase();
+    final code = _controllers.map((c) => c.text.trim()).join().toUpperCase();
     if (code.length != 6) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -51,42 +54,71 @@ class _EnterHouseCodeScreenState extends State<EnterHouseCodeScreen> {
     final houseService = HouseService();
     final user = authService.currentUser;
 
-    if (user != null) {
-      // Tham gia nhà bằng mã
-      final success = await houseService.joinHouseByCode(
-        userId: user.uid,
-        houseCode: code,
-      );
-      
-      if (mounted) {
-        setState(() => _isLoading = false);
-        
-        if (success) {
-          // Vào nhà thành công
+    try {
+      if (user == null) {
+        if (mounted) {
+          setState(() => _isLoading = false);
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('✓ Tham gia nhà thành công!'),
-              backgroundColor: Colors.green,
-            ),
-          );
-          
-          await Future.delayed(const Duration(milliseconds: 500));
-          
-          if (mounted) {
-            Navigator.of(context).pushAndRemoveUntil(
-              MaterialPageRoute(builder: (_) => DynamicHomeScreen()),
-              (route) => false,
-            );
-          }
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('❌ Mã nhà không hợp lệ!'),
+              content: Text('Bạn cần đăng nhập trước khi tham gia nhà.'),
               backgroundColor: Colors.red,
             ),
           );
         }
+        return;
       }
+
+      // Tham gia nhà bằng mã
+      final result = await houseService.joinHouseByCode(
+        userId: user.uid,
+        houseCode: code,
+      );
+
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+
+      if (result['success'] == true) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('✓ Tham gia nhà thành công!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+
+        await Future.delayed(const Duration(milliseconds: 500));
+        if (!mounted) return;
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => const DynamicHomeScreen()),
+          (route) => false,
+        );
+      } else {
+        final err = (result['error'] ?? 'unknown').toString();
+        String message = '❌ Không thể tham gia nhà.';
+        if (err == 'not-found') {
+          message = '❌ Mã nhà không hợp lệ!';
+        } else if (err == 'timeout') {
+          message = '⏱️ Kết nối chậm. Vui lòng thử lại.';
+        } else if (err == 'permission-denied') {
+          message = '🔒 Bạn không có quyền. Kiểm tra đăng nhập hoặc rules.';
+        } else if (err == 'unavailable') {
+          message = '📶 Mạng không ổn định. Thử lại sau.';
+        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(message),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Lỗi kết nối, vui lòng thử lại: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 
@@ -117,7 +149,7 @@ class _EnterHouseCodeScreenState extends State<EnterHouseCodeScreen> {
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               const SizedBox(height: 40),
-              
+
               // Icon
               Container(
                 width: 80,
@@ -132,9 +164,9 @@ class _EnterHouseCodeScreenState extends State<EnterHouseCodeScreen> {
                   color: Color.fromARGB(255, 13, 9, 230),
                 ),
               ),
-              
+
               const SizedBox(height: 24),
-              
+
               // Title
               const Text(
                 'Nhập Mã Nhà',
@@ -144,20 +176,17 @@ class _EnterHouseCodeScreenState extends State<EnterHouseCodeScreen> {
                   color: AppColors.textPrimary,
                 ),
               ),
-              
+
               const SizedBox(height: 8),
-              
+
               // Subtitle
               const Text(
                 'Nhập mã 6 số để tham gia nhà',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: AppColors.textSecondary,
-                ),
+                style: TextStyle(fontSize: 14, color: AppColors.textSecondary),
               ),
-              
+
               const SizedBox(height: 40),
-              
+
               // Code input fields
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -182,15 +211,24 @@ class _EnterHouseCodeScreenState extends State<EnterHouseCodeScreen> {
                         fillColor: Colors.white,
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: AppColors.accentPurple, width: 1.5),
+                          borderSide: const BorderSide(
+                            color: AppColors.accentPurple,
+                            width: 1.5,
+                          ),
                         ),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(color: AppColors.textLight.withOpacity(0.3), width: 1.5),
+                          borderSide: BorderSide(
+                            color: AppColors.textLight.withOpacity(0.3),
+                            width: 1.5,
+                          ),
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: AppColors.accentPurple, width: 2),
+                          borderSide: const BorderSide(
+                            color: AppColors.accentPurple,
+                            width: 2,
+                          ),
                         ),
                       ),
                       onChanged: (value) => _handleCodeInput(index, value),
@@ -202,9 +240,9 @@ class _EnterHouseCodeScreenState extends State<EnterHouseCodeScreen> {
                   );
                 }),
               ),
-              
+
               const SizedBox(height: 32),
-              
+
               // Info box
               Container(
                 padding: const EdgeInsets.all(16),
@@ -218,11 +256,7 @@ class _EnterHouseCodeScreenState extends State<EnterHouseCodeScreen> {
                 ),
                 child: Row(
                   children: [
-                    Icon(
-                      Icons.info_outline,
-                      color: AppColors.info,
-                      size: 20,
-                    ),
+                    Icon(Icons.info_outline, color: AppColors.info, size: 20),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
@@ -237,9 +271,9 @@ class _EnterHouseCodeScreenState extends State<EnterHouseCodeScreen> {
                   ],
                 ),
               ),
-              
+
               const Spacer(),
-              
+
               // Submit button
               SizedBox(
                 width: double.infinity,
@@ -260,7 +294,9 @@ class _EnterHouseCodeScreenState extends State<EnterHouseCodeScreen> {
                           height: 20,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(Color.fromARGB(255, 10, 10, 10)),
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Color.fromARGB(255, 10, 10, 10),
+                            ),
                           ),
                         )
                       : const Text(
@@ -272,9 +308,9 @@ class _EnterHouseCodeScreenState extends State<EnterHouseCodeScreen> {
                         ),
                 ),
               ),
-              
+
               const SizedBox(height: 16),
-              
+
               // Create house link
               TextButton(
                 onPressed: () {
@@ -288,7 +324,7 @@ class _EnterHouseCodeScreenState extends State<EnterHouseCodeScreen> {
                   ),
                 ),
               ),
-              
+
               const SizedBox(height: 24),
             ],
           ),

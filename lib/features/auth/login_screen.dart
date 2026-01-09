@@ -13,12 +13,14 @@ class LoginScreen extends StatefulWidget {
   State<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStateMixin {
+class _LoginScreenState extends State<LoginScreen>
+    with SingleTickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
   final _contactController = TextEditingController(); // email or phone
   final _passwordController = TextEditingController();
   final _authService = AuthService();
   bool _isLoading = false;
+  bool _isPhoneMode = false;
   late final AnimationController _logoController;
   late final Animation<double> _logoScale;
   late final Animation<double> _logoOpacity;
@@ -45,15 +47,30 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
       CurvedAnimation(parent: _logoController, curve: Curves.easeInOut),
     );
     _logoController.repeat(reverse: true);
+
+    // Detect contact mode changes (email vs phone) on the fly
+    _contactController.addListener(_updateContactMode);
   }
 
-  Future<void> _handleLogin() async {
+  void _updateContactMode() {
+    final v = _contactController.text.trim();
+    final phoneMode = !v.contains('@');
+    if (phoneMode != _isPhoneMode) {
+      setState(() {
+        _isPhoneMode = phoneMode;
+      });
+    }
+  }
+
+  Future<void> _handleEmailOrPhoneLogin() async {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isLoading = true);
     try {
+      final contact = _contactController.text.trim();
+      final emailToUse = _isPhoneMode ? _aliasEmailForPhone(contact) : contact;
       final result = await _authService.login(
-        email: _contactController.text.trim(),
+        email: emailToUse,
         password: _passwordController.text,
       );
 
@@ -66,7 +83,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
               backgroundColor: Color.fromARGB(255, 56, 56, 142),
             ),
           );
-          
+
           if (user != null) {
             // Sau khi đăng nhập thành công, luôn đi tới WelcomeHouseScreen
             // User có thể chọn "Tạo Nhà Mới" hoặc "Gia nhập nhà bằng Mã"
@@ -81,7 +98,9 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('❌ Đăng nhập thất bại! Vui lòng kiểm tra thông tin.'),
+              content: Text(
+                '❌ Đăng nhập thất bại! Vui lòng kiểm tra thông tin.',
+              ),
               backgroundColor: Color.fromARGB(255, 229, 57, 53),
             ),
           );
@@ -90,6 +109,19 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  Future<void> _handlePrimaryAction() async {
+    await _handleEmailOrPhoneLogin();
+  }
+
+  String _aliasEmailForPhone(String input) {
+    var v = input.trim();
+    if (!v.startsWith('+')) {
+      if (v.startsWith('0')) v = '+84${v.substring(1)}';
+    }
+    final normalizedDigits = v.replaceAll(RegExp(r"[^0-9+]"), "");
+    return "$normalizedDigits@phone.local";
   }
 
   @override
@@ -129,7 +161,10 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
               height: 300,
               decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [AppColors.accentGreen.withOpacity(0.06), AppColors.accentBlue.withOpacity(0.04)],
+                  colors: [
+                    AppColors.accentGreen.withOpacity(0.06),
+                    AppColors.accentBlue.withOpacity(0.04),
+                  ],
                 ),
                 borderRadius: BorderRadius.circular(160),
               ),
@@ -140,7 +175,10 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
           SafeArea(
             child: SingleChildScrollView(
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 28.0),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24.0,
+                  vertical: 28.0,
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
@@ -170,7 +208,11 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                   ),
                                 ],
                               ),
-                              child: const Icon(Icons.home_filled, size: 48, color: AppColors.bgWhite),
+                              child: const Icon(
+                                Icons.home_filled,
+                                size: 48,
+                                color: AppColors.bgWhite,
+                              ),
                             ),
                           ),
                         ),
@@ -223,27 +265,41 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                               labelText: 'Email hoặc Số điện thoại',
                               hintText: 'example@mail.com hoặc 0123456789',
                               filled: true,
-                              fillColor: AppColors.accentGreen.withOpacity(0.08),
+                              fillColor: AppColors.accentGreen.withOpacity(
+                                0.08,
+                              ),
                               enabledBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
-                                borderSide: BorderSide(color: AppColors.accentGreen, width: 1.5),
+                                borderSide: BorderSide(
+                                  color: AppColors.accentGreen,
+                                  width: 1.5,
+                                ),
                               ),
                               focusedBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
-                                borderSide: BorderSide(color: AppColors.accentGreen, width: 2.0),
+                                borderSide: BorderSide(
+                                  color: AppColors.accentGreen,
+                                  width: 2.0,
+                                ),
                               ),
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 18,
+                              ),
                             ),
                           ),
                           const SizedBox(height: 12),
-
-                          // Password field - subtle border, gray-blue background
+                          // Password field (required for both email and phone login)
                           TextFormField(
                             controller: _passwordController,
                             obscureText: true,
                             validator: (value) {
-                              if (value == null || value.isEmpty) return 'Vui lòng nhập mật khẩu';
-                              if (!AppUtils.isValidPassword(value)) return 'Mật khẩu phải có ít nhất 6 ký tự';
+                              if (value == null || value.isEmpty) {
+                                return 'Vui lòng nhập mật khẩu';
+                              }
+                              if (!AppUtils.isValidPassword(value)) {
+                                return 'Mật khẩu phải có ít nhất 6 ký tự';
+                              }
                               return null;
                             },
                             decoration: InputDecoration(
@@ -252,50 +308,83 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                               fillColor: AppColors.bgGrey.withOpacity(0.6),
                               enabledBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
-                                borderSide: BorderSide(color: AppColors.borderLight.withOpacity(0.6), width: 0.6),
+                                borderSide: BorderSide(
+                                  color: AppColors.borderLight.withOpacity(0.6),
+                                  width: 0.6,
+                                ),
                               ),
                               focusedBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
-                                borderSide: BorderSide(color: AppColors.borderMedium, width: 1.0),
+                                borderSide: BorderSide(
+                                  color: AppColors.borderMedium,
+                                  width: 1.0,
+                                ),
                               ),
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 18,
+                              ),
                             ),
                           ),
 
                           // Forgot password align right
                           const SizedBox(height: 8),
-                          Align(
-                            alignment: Alignment.centerRight,
-                            child: TextButton(
-                              onPressed: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(builder: (_) => const ForgotPasswordScreen()),
-                                );
-                              },
-                              child: const Text(
-                                'Bạn quên mật khẩu?',
-                                style: TextStyle(color: Color.fromARGB(255, 7, 7, 7)),
+                          if (!_isPhoneMode)
+                            Align(
+                              alignment: Alignment.centerRight,
+                              child: TextButton(
+                                onPressed: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) =>
+                                          const ForgotPasswordScreen(),
+                                    ),
+                                  );
+                                },
+                                child: const Text(
+                                  'Bạn quên mật khẩu?',
+                                  style: TextStyle(
+                                    color: Color.fromARGB(255, 7, 7, 7),
+                                  ),
+                                ),
                               ),
                             ),
-                          ),
 
                           const SizedBox(height: 12),
 
                           // Login button - prominent
                           ElevatedButton(
-                            onPressed: _isLoading ? null : _handleLogin,
+                            onPressed: _isLoading ? null : _handlePrimaryAction,
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color.fromARGB(255, 38, 10, 251),
+                              backgroundColor: const Color.fromARGB(
+                                255,
+                                38,
+                                10,
+                                251,
+                              ),
                               elevation: 10,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
                               padding: const EdgeInsets.symmetric(vertical: 16),
                             ),
                             child: _isLoading
-                                ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: AppColors.bgWhite, strokeWidth: 2))
+                                ? const SizedBox(
+                                    height: 20,
+                                    width: 20,
+                                    child: CircularProgressIndicator(
+                                      color: AppColors.bgWhite,
+                                      strokeWidth: 2,
+                                    ),
+                                  )
                                 : const Text(
                                     'Đăng nhập',
-                                    style: TextStyle(color: Color.fromARGB(255, 11, 11, 11), fontSize: 16, fontWeight: FontWeight.w700),
+                                    style: TextStyle(
+                                      color: Color.fromARGB(255, 11, 11, 11),
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w700,
+                                    ),
                                   ),
                           ),
                         ],
@@ -311,18 +400,26 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                           onTap: () {
                             Navigator.push(
                               context,
-                              MaterialPageRoute(builder: (_) => const RegisterScreen()),
+                              MaterialPageRoute(
+                                builder: (_) => const RegisterScreen(),
+                              ),
                             );
                           },
                           child: const Text(
                             'Tạo tài khoản mới',
-                            style: TextStyle(color: Color.fromARGB(255, 14, 14, 14), fontSize: 14),
+                            style: TextStyle(
+                              color: Color.fromARGB(255, 14, 14, 14),
+                              fontSize: 14,
+                            ),
                           ),
                         ),
                         const SizedBox(height: 12),
                         const Text(
                           'Tiếp tục với',
-                          style: TextStyle(color: AppColors.accentBlue, fontSize: 14),
+                          style: TextStyle(
+                            color: AppColors.accentBlue,
+                            fontSize: 14,
+                          ),
                         ),
                         const SizedBox(height: 12),
 
@@ -330,17 +427,29 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            _buildSocialButton(icon: Icons.g_mobiledata, label: 'Google', onTap: () {
-                              // TODO: implement Google sign-in
-                            }),
+                            _buildSocialButton(
+                              icon: Icons.g_mobiledata,
+                              label: 'Google',
+                              onTap: () {
+                                // TODO: implement Google sign-in
+                              },
+                            ),
                             const SizedBox(width: 12),
-                            _buildSocialButton(icon: Icons.facebook, label: 'Facebook', onTap: () {
-                              // TODO: implement Facebook sign-in
-                            }),
+                            _buildSocialButton(
+                              icon: Icons.facebook,
+                              label: 'Facebook',
+                              onTap: () {
+                                // TODO: implement Facebook sign-in
+                              },
+                            ),
                             const SizedBox(width: 12),
-                            _buildSocialButton(icon: Icons.apple, label: 'Apple', onTap: () {
-                              // TODO: implement Apple sign-in
-                            }),
+                            _buildSocialButton(
+                              icon: Icons.apple,
+                              label: 'Apple',
+                              onTap: () {
+                                // TODO: implement Apple sign-in
+                              },
+                            ),
                           ],
                         ),
                       ],
@@ -355,7 +464,11 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     );
   }
 
-  Widget _buildSocialButton({required IconData icon, required String label, required VoidCallback onTap}) {
+  Widget _buildSocialButton({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+  }) {
     return GestureDetector(
       onTap: onTap,
       child: CircleAvatar(
@@ -366,4 +479,3 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     );
   }
 }
-

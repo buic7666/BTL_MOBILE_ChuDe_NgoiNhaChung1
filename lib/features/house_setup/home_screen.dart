@@ -3,9 +3,39 @@ import '../../constants/app_colors.dart';
 import '../../common_widgets/custom_button.dart';
 import '../auth/login_screen.dart';
 import '../auth/register_screen.dart';
+import '../../core/services/auth_service.dart';
+import 'welcome_house_screen.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  @override
+  void initState() {
+    super.initState();
+    _checkAuthAndRedirect();
+  }
+
+  void _checkAuthAndRedirect() {
+    // Defer until after first frame to avoid build-context issues
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      try {
+        if (AuthService().isAuthenticated) {
+          if (!mounted) return;
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => const WelcomeHouseScreen()),
+          );
+        }
+      } catch (_) {
+        // If anything fails, stay on HomeScreen gracefully
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -79,7 +109,9 @@ class HomeScreen extends StatelessWidget {
                         onPressed: () {
                           Navigator.push(
                             context,
-                            MaterialPageRoute(builder: (_) => const LoginScreen()),
+                            MaterialPageRoute(
+                              builder: (_) => const LoginScreen(),
+                            ),
                           );
                         },
                         width: double.infinity,
@@ -94,7 +126,9 @@ class HomeScreen extends StatelessWidget {
                         onPressed: () {
                           Navigator.push(
                             context,
-                            MaterialPageRoute(builder: (_) => const RegisterScreen()),
+                            MaterialPageRoute(
+                              builder: (_) => const RegisterScreen(),
+                            ),
                           );
                         },
                         width: double.infinity,

@@ -2,13 +2,20 @@ import 'package:flutter/material.dart';
 import 'constants/app_colors.dart';
 import 'features/house_setup/home_screen.dart';
 import 'models/user_profile_house_ext.dart';
+import 'firebase_options.dart';
+import 'package:firebase_core/firebase_core.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
+  // Initialize Firebase
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+  
   // Initialize SharedPreferences
   await UserProfileHouseExt.initializeFromStorage();
-  
+
   runApp(const MyApp());
 }
 
@@ -25,7 +32,8 @@ class MyApp extends StatelessWidget {
         useMaterial3: true,
         fontFamily: 'Roboto',
       ),
-      home: const HomeScreen(), // Main welcome screen with Login/Register actions
+      home:
+          const HomeScreen(), // Main welcome screen with Login/Register actions
     );
   }
 }
