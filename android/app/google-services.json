@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "536960875406",
+    "project_id": "housepal-app-2025",
+    "storage_bucket": "housepal-app-2025.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:536960875406:android:cfba084d21db3a27ccc2df",
+        "android_client_info": {
+          "package_name": "com.example.btl_mobile"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDf6KNlbclWb74XFw1ZdRPRf7WLBT6MyY0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

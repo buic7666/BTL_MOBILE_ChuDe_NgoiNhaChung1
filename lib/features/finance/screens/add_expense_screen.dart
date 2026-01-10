@@ -1,11 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import '../../constants/app_colors.dart';
 
-enum SplitMode { equal, percent, perPerson }
+import '../models/split_mode.dart';
+import '../../../models/user_profile.dart';
 
 class AddExpenseScreen extends StatefulWidget {
-  const AddExpenseScreen({super.key});
+  final String? currentUserId;
+  final List<String>? memberIds;
+  final Map<String, UserProfile>? userProfiles;
+
+  const AddExpenseScreen({
+    super.key,
+    this.currentUserId,
+    this.memberIds,
+    this.userProfiles,
+  });
 
   @override
   State<AddExpenseScreen> createState() => _AddExpenseScreenState();
@@ -39,9 +48,49 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
   @override
   void initState() {
     super.initState();
-    _memberSelected = List<bool>.filled(_members.length, true);
+    _initializeMembers();
     // Set default title logic if needed, or leave empty as per original
     _titleController.text = "Ăn trưa nhóm";
+  }
+
+  void _initializeMembers() {
+    // Nếu có memberIds từ props, dùng UIDs thật
+    if (widget.memberIds != null && widget.memberIds!.isNotEmpty) {
+      _members.clear();
+      final currentUserId = widget.currentUserId;
+      final profiles = widget.userProfiles ?? {};
+
+      for (final memberId in widget.memberIds!) {
+        final profile = profiles[memberId];
+        final name = memberId == currentUserId
+            ? 'Bạn'
+            : (profile?.name ??
+                  'User ${memberId.substring(0, memberId.length > 6 ? 6 : memberId.length)}');
+
+        // Tạo màu từ hash
+        final hash = memberId.hashCode;
+        final colors = [
+          const Color(0xFF8E54E9),
+          const Color(0xFF5A31D8),
+          const Color(0xFF80CBC4),
+          const Color(0xFFEF9A9A),
+          const Color(0xFF9333EA),
+          const Color(0xFFA855F7),
+        ];
+        final color = colors[hash.abs() % colors.length];
+
+        _members.add({'id': memberId, 'name': name, 'color': color});
+      }
+
+      // Sắp xếp: "Bạn" lên đầu
+      _members.sort((a, b) {
+        if (a['id'] == currentUserId) return -1;
+        if (b['id'] == currentUserId) return 1;
+        return 0;
+      });
+    }
+
+    _memberSelected = List<bool>.filled(_members.length, true);
   }
 
   @override
@@ -56,12 +105,6 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
   double get _parsedAmount {
     final raw = _amountController.text.replaceAll(RegExp(r'[^0-9\.]'), '');
     return double.tryParse(raw) ?? 0.0;
-  }
-
-  double _perPersonShare() {
-    final amt = _parsedAmount;
-    if (_members.isEmpty) return 0.0;
-    return double.parse((amt / _members.length).toStringAsFixed(0));
   }
 
   int get _selectedCount => _memberSelected.where((v) => v).length;
@@ -168,10 +211,6 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
           end: Alignment.bottomRight,
           colors: [Color(0xFF8E54E9), Color(0xFF5A31D8)],
         ),
-        // borderRadius: BorderRadius.only(
-        //   bottomLeft: Radius.circular(20),
-        //   bottomRight: Radius.circular(20),
-        // ),
       ),
       child: Row(
         children: [
@@ -643,7 +682,13 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
         ),
       ),
     );
-    if (idx != null) setState(() => _selectedPayerIndex = idx);
+    if (idx != null) {
+      setState(() {
+        _selectedPayerIndex = idx;
+        // Khi đổi người trả, tự động đặt người chia % = người trả
+        _percentMemberIndex = idx;
+      });
+    }
   }
 
   void _showPercentMemberPicker() async {
@@ -692,10 +737,17 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
   // --- HÀM XỬ LÝ DỮ LIỆU ĐẦU RA (GIỮ NGUYÊN BẢN GỐC CỦA BẠN) ---
   // Quan trọng: Hàm này đảm bảo dữ liệu trả về giống hệt code cũ để không lỗi tính toán
   void _onAddPressed() {
+    final payerMember = _members[_selectedPayerIndex];
+    final payerId = payerMember['id'] as String;
+
+    print(
+      '📋 AddExpense: payer index=$_selectedPayerIndex, payerId=$payerId, name=${payerMember['name']}',
+    );
+
     final expense = {
       'amount': _parsedAmount,
       'title': _titleController.text,
-      'payer': _members[_selectedPayerIndex]['id'],
+      'payer': payerId,
       'splitMode': _splitMode.toString(),
       'splitDetails': _splitMode == SplitMode.percent
           ? {

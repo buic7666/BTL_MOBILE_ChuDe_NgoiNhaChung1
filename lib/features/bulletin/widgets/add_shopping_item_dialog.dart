@@ -37,7 +37,7 @@ class _AddShoppingItemDialogState extends State<AddShoppingItemDialog> {
     }
 
     final newItem = ShoppingItem(
-      id: 'item_${DateTime.now().millisecondsSinceEpoch}',
+      id: '', // Firestore sẽ tạo id
       name: _itemNameController.text,
       quantity: _quantityController.text.isEmpty ? '1' : _quantityController.text,
       assignedTo: 'Chưa phân công',

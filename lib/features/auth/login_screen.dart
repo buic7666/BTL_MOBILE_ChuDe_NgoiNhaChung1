@@ -20,6 +20,7 @@ class _LoginScreenState extends State<LoginScreen>
   final _passwordController = TextEditingController();
   final _authService = AuthService();
   bool _isLoading = false;
+  bool _isPhoneMode = false;
   late final AnimationController _logoController;
   late final Animation<double> _logoScale;
   late final Animation<double> _logoOpacity;
@@ -46,15 +47,30 @@ class _LoginScreenState extends State<LoginScreen>
       CurvedAnimation(parent: _logoController, curve: Curves.easeInOut),
     );
     _logoController.repeat(reverse: true);
+
+    // Detect contact mode changes (email vs phone) on the fly
+    _contactController.addListener(_updateContactMode);
   }
 
-  Future<void> _handleLogin() async {
+  void _updateContactMode() {
+    final v = _contactController.text.trim();
+    final phoneMode = !v.contains('@');
+    if (phoneMode != _isPhoneMode) {
+      setState(() {
+        _isPhoneMode = phoneMode;
+      });
+    }
+  }
+
+  Future<void> _handleEmailOrPhoneLogin() async {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isLoading = true);
     try {
+      final contact = _contactController.text.trim();
+      final emailToUse = _isPhoneMode ? _aliasEmailForPhone(contact) : contact;
       final result = await _authService.login(
-        email: _contactController.text.trim(),
+        email: emailToUse,
         password: _passwordController.text,
       );
 
@@ -93,6 +109,19 @@ class _LoginScreenState extends State<LoginScreen>
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  Future<void> _handlePrimaryAction() async {
+    await _handleEmailOrPhoneLogin();
+  }
+
+  String _aliasEmailForPhone(String input) {
+    var v = input.trim();
+    if (!v.startsWith('+')) {
+      if (v.startsWith('0')) v = '+84${v.substring(1)}';
+    }
+    final normalizedDigits = v.replaceAll(RegExp(r"[^0-9+]"), "");
+    return "$normalizedDigits@phone.local";
   }
 
   @override
@@ -260,16 +289,17 @@ class _LoginScreenState extends State<LoginScreen>
                             ),
                           ),
                           const SizedBox(height: 12),
-
-                          // Password field - subtle border, gray-blue background
+                          // Password field (required for both email and phone login)
                           TextFormField(
                             controller: _passwordController,
                             obscureText: true,
                             validator: (value) {
-                              if (value == null || value.isEmpty)
+                              if (value == null || value.isEmpty) {
                                 return 'Vui lòng nhập mật khẩu';
-                              if (!AppUtils.isValidPassword(value))
+                              }
+                              if (!AppUtils.isValidPassword(value)) {
                                 return 'Mật khẩu phải có ít nhất 6 ký tự';
+                              }
                               return null;
                             },
                             decoration: InputDecoration(
@@ -299,32 +329,33 @@ class _LoginScreenState extends State<LoginScreen>
 
                           // Forgot password align right
                           const SizedBox(height: 8),
-                          Align(
-                            alignment: Alignment.centerRight,
-                            child: TextButton(
-                              onPressed: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) =>
-                                        const ForgotPasswordScreen(),
+                          if (!_isPhoneMode)
+                            Align(
+                              alignment: Alignment.centerRight,
+                              child: TextButton(
+                                onPressed: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) =>
+                                          const ForgotPasswordScreen(),
+                                    ),
+                                  );
+                                },
+                                child: const Text(
+                                  'Bạn quên mật khẩu?',
+                                  style: TextStyle(
+                                    color: Color.fromARGB(255, 7, 7, 7),
                                   ),
-                                );
-                              },
-                              child: const Text(
-                                'Bạn quên mật khẩu?',
-                                style: TextStyle(
-                                  color: Color.fromARGB(255, 7, 7, 7),
                                 ),
                               ),
                             ),
-                          ),
 
                           const SizedBox(height: 12),
 
                           // Login button - prominent
                           ElevatedButton(
-                            onPressed: _isLoading ? null : _handleLogin,
+                            onPressed: _isLoading ? null : _handlePrimaryAction,
                             style: ElevatedButton.styleFrom(
                               backgroundColor: const Color.fromARGB(
                                 255,
